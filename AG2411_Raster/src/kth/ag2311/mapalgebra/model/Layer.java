@@ -425,7 +425,7 @@ public class Layer {
 
 		jlabel.setIcon(ii);
 		jframe.add(jlabel);
-		jframe.setSize(nCols + 25, nRows + 50);
+		jframe.setSize(nRows + 25, nCols + 50);
 		jframe.setVisible(true);
 
 	}
@@ -489,7 +489,7 @@ public class Layer {
 
 		jlabel.setIcon(ii);
 		jframe.add(jlabel);
-		jframe.setSize(nCols + 25, nRows + 50);
+		jframe.setSize(nRows + 25, nCols + 50);
 		jframe.setVisible(true);
 
 	}

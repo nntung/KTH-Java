@@ -9,7 +9,7 @@ public class ex00 {
  		Layer road = new Layer("road", "c:/DataJava/road.txt");
 		road.map();
 
-		Layer shortest = road.getShortestPath(490, 120, 150, 450);
+		Layer shortest = road.getShortestPath(490, 120, 150, 750);
 //		shortest.save("c:/tmp/shortest.txt");
 
 		road.merge(shortest);
