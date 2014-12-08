@@ -781,6 +781,13 @@ public class Layer {
 	 * SHORTEST PATH 
 	 */
 	
+	private final static int[] dx = {-1,0,1,1,1,0,-1,-1};
+	private final static int[] dy = {-1,-1,-1,0,1,1,1,0};
+	
+	// 1 2 3
+	// 8 0 4
+	// 7 6 5
+	
 	private void setPoint(Point p, double v) {
 		this.values[p.y][p.x] = v;
 	}
@@ -789,8 +796,28 @@ public class Layer {
 		return this.values[p.y][p.x];
 	}
 	
+	private boolean isValidPoint(Point p) {
+		if (p.x<0 || p.y<0 || p.x>nCols || p.y>nRows)
+			return false;
+		else 
+			return true;
+	}
+	
 	public Layer getShortestPath(int fromX, int fromY, int toX, int toY) {
-		Layer outLayer = null;
+		Point startingPoint = new Point(fromY, fromX); // STRANGE!
+		Point endingPoint = new Point(toY, toX); // STRANGE!
+		
+		if (!isValidPoint(startingPoint) || !isValidPoint(endingPoint)) 
+			return null;
+		
+		Layer outLayer = new Layer("visitedLayer", nRows, nCols, originX,
+				originY, resolution, 0);
+		
+		for (int i=0; i<8; i++) {
+			// calculate coordinates
+			outLayer.values[startingPoint.y + dy[i]][startingPoint.x + dx[i]] = 2;
+			outLayer.values[endingPoint.y + dy[i]][endingPoint.x + dx[i]] = 2;
+		}
 		
 		Layer visited = new Layer("visitedLayer", nRows, nCols, originX,
 				originY, resolution, 0);
@@ -799,29 +826,152 @@ public class Layer {
 				originY, resolution, 0);
 		
 		int maxValue = this.nRows + this.nCols;
-		int[] dx = {-1,0,1,1,1,0,-1,-1};
-		int[] dy = {-1,-1,-1,0,1,1,1,0};
-		
-		// 1 2 3
-		// 8 0 4
-		// 7 6 5
 
 		ArrayList<Point> candidates = new ArrayList<Point>();
-		Point startingPoint = new Point(fromX, fromY);
-		Point endingPoint = new Point(toX, toY);
+		ArrayList<Point> candidatesRoad = new ArrayList<Point>();
+		ArrayList<Point> candidatesEnd = new ArrayList<Point>();
 		
 		candidates.add(startingPoint);
-		
 		Point currentPoint = candidates.get(0);
 		weight.setPoint(currentPoint, 0);
 		visited.setPoint(currentPoint, 1000);
-		
-		// find the possible shortest way
+				
 		int xx,yy;
 		int idx = 0;
 		double newWeight, setWeight;
 		Point tmp = null;
+		
+		boolean foundRoadFromStarting = false;
+		Point startOnRoad = null;
+		
+		// find the possible shortest way to road
 		while (!currentPoint.isEqual(endingPoint) && !candidates.isEmpty()) {
+			
+			// update from min Point
+			for (int i=0; i<8; i++) {
+				// calculate coordinates
+				xx = currentPoint.x + dx[i];
+				yy = currentPoint.y + dy[i];
+				// check if this coordinates is inside matrix
+				if (xx>0 && yy>0 && xx<nCols && yy<nRows) {
+					tmp = new Point(xx,yy);
+					// check if this Point is visited as a min Point
+					if (this.getPoint(tmp)!=this.nullValue) {
+						startOnRoad = new Point(tmp);
+						foundRoadFromStarting = true;
+						break;
+					} else {
+						if (visited.getPoint(tmp) < 100) {
+							setWeight = (this.getPoint(tmp) == this.nullValue) ? maxValue : 1;
+							newWeight = weight.getPoint(currentPoint) + setWeight;
+							if (weight.getPoint(tmp) == 0) {
+								// check if this Point visit at the first time
+								visited.setPoint(tmp, i+1);
+								weight.setPoint(tmp, newWeight);
+								candidates.add(tmp);
+							} else if (newWeight < weight.getPoint(tmp)) {
+								// check if newWeight is shorter, then update
+								visited.setPoint(tmp, i+1);
+								weight.setPoint(tmp, newWeight);
+							}
+						}
+					}
+				}
+			}
+			
+			if (foundRoadFromStarting) break;
+			
+			// remove this min Point
+			candidates.remove(idx);
+			
+			// find another min Point
+			double minValue = Double.MAX_VALUE;
+			int canSize = candidates.size();
+			if (canSize>0) {
+				for (int i=0; i<canSize; i++) {
+					tmp = candidates.get(i);
+					if (minValue > weight.getPoint(tmp)) {
+						idx = i;
+						minValue = weight.getPoint(tmp);
+					}
+				}
+				
+				currentPoint = candidates.get(idx);
+				double dir = visited.getPoint(currentPoint);
+				visited.setPoint(currentPoint, dir * 100);
+			} else {
+				break;
+			}
+		}
+		
+		candidatesRoad.add(startOnRoad);
+		int idxRoad = 0;
+		
+		// find the possible shortest way on road ONLY
+		while (!currentPoint.isEqual(endingPoint) && !candidatesRoad.isEmpty()) {
+			
+			// update from min Point
+			for (int i=0; i<8; i++) {
+				// calculate coordinates
+				xx = currentPoint.x + dx[i];
+				yy = currentPoint.y + dy[i];
+				// check if this coordinates is inside matrix
+				if (xx>0 && yy>0 && xx<nCols && yy<nRows) {
+					tmp = new Point(xx,yy);
+					// check if this Point is visited as a min Point
+					if (visited.getPoint(tmp) < 100
+							&& this.getPoint(tmp)!=this.nullValue) {
+						setWeight = (this.getPoint(tmp) == this.nullValue) ? maxValue : 1;
+						newWeight = weight.getPoint(currentPoint) + setWeight;
+						if (weight.getPoint(tmp) == 0) {
+							// check if this Point visit at the first time
+							visited.setPoint(tmp, i+1);
+							weight.setPoint(tmp, newWeight);
+							candidatesRoad.add(tmp);
+						} else if (newWeight < weight.getPoint(tmp)) {
+							// check if newWeight is shorter, then update
+							visited.setPoint(tmp, i+1);
+							weight.setPoint(tmp, newWeight);
+						}
+					}
+				}
+			}
+			
+			// remove this min Point
+			candidatesRoad.remove(idxRoad);
+			
+			// find another min Point
+			double minValue = Double.MAX_VALUE;
+			int canSize = candidatesRoad.size();
+			if (canSize>0) {
+				for (int i=0; i<canSize; i++) {
+					tmp = candidatesRoad.get(i);
+					if (minValue > weight.getPoint(tmp)) {
+						idxRoad = i;
+						minValue = weight.getPoint(tmp);
+					}
+				}
+				
+				currentPoint = candidatesRoad.get(idxRoad);
+				double dir = visited.getPoint(currentPoint);
+				visited.setPoint(currentPoint, dir * 100);
+			} else {
+				break;
+			}
+		}
+		
+		candidatesEnd.add(endingPoint);
+		int idxEnd = 0;
+		currentPoint = candidatesEnd.get(0);
+		weight.setPoint(currentPoint, 0);
+		visited.setPoint(currentPoint, 1000);
+		
+		boolean foundWayFromEnding = false;
+		Point endingOnRoad = null;
+		Point endingFromRoad = null;
+		
+		// find the possible shortest way from ending point to visited road (ONLY ONCE)
+		while (!candidatesEnd.isEmpty()) {
 			
 			// update from min Point
 			for (int i=0; i<8; i++) {
@@ -839,74 +989,131 @@ public class Layer {
 							// check if this Point visit at the first time
 							visited.setPoint(tmp, i+1);
 							weight.setPoint(tmp, newWeight);
-							candidates.add(tmp);
+							candidatesEnd.add(tmp);
 						} else if (newWeight < weight.getPoint(tmp)) {
 							// check if newWeight is shorter, then update
 							visited.setPoint(tmp, i+1);
 							weight.setPoint(tmp, newWeight);
 						}
+					} else {
+						if (this.getPoint(tmp)!=this.nullValue) {
+							// FOUND!!!
+							endingOnRoad = new Point(xx, yy);
+							endingFromRoad = new Point(currentPoint);
+							foundWayFromEnding = true;
+							break;
+						}
 					}
 				}
 			}
 			
+			if (foundWayFromEnding) break;
+			
 			// remove this min Point
-			candidates.remove(idx);
+			candidatesEnd.remove(idxEnd);
 			
 			// find another min Point
 			double minValue = Double.MAX_VALUE;
-			int canSize = candidates.size();
-			for (int i=0; i<canSize; i++) {
-				tmp = candidates.get(i);
-				if (minValue > weight.getPoint(tmp)) {
-					idx = i;
-					minValue = weight.getPoint(tmp);
+			int canSize = candidatesEnd.size();
+			if (canSize>0) {
+				for (int i=0; i<canSize; i++) {
+					tmp = candidatesEnd.get(i);
+					if (minValue > weight.getPoint(tmp)) {
+						idxEnd = i;
+						minValue = weight.getPoint(tmp);
+					}
+				}
+				
+				currentPoint = candidatesEnd.get(idxEnd);
+				double dir = visited.getPoint(currentPoint);
+				visited.setPoint(currentPoint, dir * 100);
+			} else {
+				break;
+			}
+		}
+		
+		// weight.map();
+
+		// trace back the shortest way
+		if (foundWayFromEnding) {
+			
+			// trace back from endingOnRoad to starting Point
+			while (visited.getPoint(endingOnRoad) != 1000) {
+				outLayer.setPoint(endingOnRoad, 1);
+				int direction = (int) visited.getPoint(endingOnRoad); 
+				switch (direction) {
+				case 100: 
+					endingOnRoad.x ++;
+					endingOnRoad.y ++;
+					break;
+				case 200:
+					//endingOnRoad.x ++;
+					endingOnRoad.y ++;
+					break;
+				case 300:
+					endingOnRoad.x --;
+					endingOnRoad.y ++;
+					break;
+				case 400:
+					endingOnRoad.x --;
+					//endingOnRoad.y ++;
+					break;
+				case 500:
+					endingOnRoad.x --;
+					endingOnRoad.y --;
+					break;
+				case 600:
+					//endingOnRoad.x ++;
+					endingOnRoad.y --;
+					break;
+				case 700:
+					endingOnRoad.x ++;
+					endingOnRoad.y --;
+					break;
+				case 800:
+					endingOnRoad.x ++;
+					//endingOnRoad.y ++;
+					break;
 				}
 			}
 			
-			currentPoint = candidates.get(idx);
-			double dir = visited.getPoint(currentPoint);
-			visited.setPoint(currentPoint, dir * 100);
-		}
-		
-		// trace back the shortest way
-		if (currentPoint.isEqual(endingPoint)) {
-			outLayer = new Layer("visitedLayer", nRows, nCols, originX,
-					originY, resolution, 0);
-			while (visited.getPoint(endingPoint) != 1000) {
-				outLayer.setPoint(endingPoint, 1);
-				int direction = (int) visited.getPoint(endingPoint); 
+			// trace back from endingFromRoad to ending Point
+
+			while (visited.getPoint(endingFromRoad) != 1000) {
+				outLayer.setPoint(endingFromRoad, 1);
+				int direction = (int) visited.getPoint(endingFromRoad); 
 				switch (direction) {
-				case 100:
-					endingPoint.x ++;
-					endingPoint.y ++;
+				case 100: 
+					endingFromRoad.x ++;
+					endingFromRoad.y ++;
 					break;
 				case 200:
-					//endingPoint.x ++;
-					endingPoint.y ++;
+					//endingFromRoad.x ++;
+					endingFromRoad.y ++;
 					break;
 				case 300:
-					endingPoint.x --;
-					endingPoint.y ++;
+					endingFromRoad.x --;
+					endingFromRoad.y ++;
 					break;
 				case 400:
-					endingPoint.x --;
-					//endingPoint.y ++;
+					endingFromRoad.x --;
+					//endingFromRoad.y ++;
 					break;
 				case 500:
-					endingPoint.x --;
-					endingPoint.y --;
+					endingFromRoad.x --;
+					endingFromRoad.y --;
 					break;
 				case 600:
-					//endingPoint.x ++;
-					endingPoint.y --;
+					//endingFromRoad.x ++;
+					endingFromRoad.y --;
 					break;
 				case 700:
-					endingPoint.x ++;
-					endingPoint.y --;
+					endingFromRoad.x ++;
+					endingFromRoad.y --;
 					break;
 				case 800:
-					endingPoint.x ++;
-					//endingPoint.y ++;
+					endingFromRoad.x ++;
+					//endingFromRoad.y ++;
 					break;
 				}
 			}
