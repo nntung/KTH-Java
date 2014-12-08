@@ -393,7 +393,7 @@ public class Layer {
 	 */
 
 	public void map() {
-		BufferedImage image = new BufferedImage(nRows, nCols,
+		BufferedImage image = new BufferedImage(nCols, nRows,
 				BufferedImage.TYPE_INT_RGB);
 		WritableRaster raster = image.getRaster();
 
@@ -414,7 +414,7 @@ public class Layer {
 					color[1] = value; // Green
 					color[2] = value; // Blue
 				}
-				raster.setPixel(i, j, color);
+				raster.setPixel(j, i, color);
 			}
 		}
 
@@ -425,7 +425,7 @@ public class Layer {
 
 		jlabel.setIcon(ii);
 		jframe.add(jlabel);
-		jframe.setSize(nRows + 25, nCols + 50);
+		jframe.setSize(nCols + 25, nRows + 50);
 		jframe.setVisible(true);
 
 	}
@@ -437,7 +437,7 @@ public class Layer {
 	 *            list of interesting values
 	 */
 	public void map(double[] interestingValues) {
-		BufferedImage image = new BufferedImage(nRows, nCols,
+		BufferedImage image = new BufferedImage(nCols, nRows,
 				BufferedImage.TYPE_INT_RGB);
 		WritableRaster raster = image.getRaster();
 
@@ -478,7 +478,7 @@ public class Layer {
 						}
 					}
 				}
-				raster.setPixel(i, j, color);
+				raster.setPixel(j, i, color);
 			}
 		}
 
@@ -489,7 +489,7 @@ public class Layer {
 
 		jlabel.setIcon(ii);
 		jframe.add(jlabel);
-		jframe.setSize(nRows + 25, nCols + 50);
+		jframe.setSize(nCols + 25, nRows + 50);
 		jframe.setVisible(true);
 
 	}
@@ -804,8 +804,8 @@ public class Layer {
 	}
 	
 	public Layer getShortestPath(int fromX, int fromY, int toX, int toY) {
-		Point startingPoint = new Point(fromY, fromX); // STRANGE!
-		Point endingPoint = new Point(toY, toX); // STRANGE!
+		Point startingPoint = new Point(fromX, fromY); // STRANGE!
+		Point endingPoint = new Point(toX, toY); // STRANGE!
 		
 		if (!isValidPoint(startingPoint) || !isValidPoint(endingPoint)) 
 			return null;
