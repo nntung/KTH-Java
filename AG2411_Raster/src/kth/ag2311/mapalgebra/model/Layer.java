@@ -195,6 +195,10 @@ public class Layer {
 				e.printStackTrace();
 			}
 		}
+		
+		// get max and min value
+		getMax();
+		getMin();
 
 		System.out.println("Loaded!");
 	}
@@ -397,7 +401,9 @@ public class Layer {
 				BufferedImage.TYPE_INT_RGB);
 		WritableRaster raster = image.getRaster();
 
-		double grayscale = maxGray / (this.getMax() - this.getMin());
+		double grayscale = maxGray ;
+		if (maxValue > minValue)
+			grayscale = maxGray / (maxValue - minValue);
 
 		// write data to raster
 		int[] color = new int[3];
@@ -425,6 +431,7 @@ public class Layer {
 
 		jlabel.setIcon(ii);
 		jframe.add(jlabel);
+		jframe.setTitle(this.name);
 		jframe.setSize(nCols + 25, nRows + 50);
 		jframe.setVisible(true);
 
@@ -441,7 +448,10 @@ public class Layer {
 				BufferedImage.TYPE_INT_RGB);
 		WritableRaster raster = image.getRaster();
 
-		double grayscale = maxGray / (this.getMax() - this.getMin());
+		double grayscale = maxGray ;
+		if (maxValue > minValue)
+			grayscale = maxGray / (maxValue - minValue);
+		
 		// create random color for each interesting values
 		Random rand = new Random();
 		int numOfInterest = interestingValues.length;
@@ -489,6 +499,7 @@ public class Layer {
 
 		jlabel.setIcon(ii);
 		jframe.add(jlabel);
+		jframe.setTitle(this.name);
 		jframe.setSize(nCols + 25, nRows + 50);
 		jframe.setVisible(true);
 
@@ -780,6 +791,8 @@ public class Layer {
 	/**
 	 * SHORTEST PATH 
 	 */
+	public final static double shortestValue = 100;
+	public final static double shortestPoint = 200;
 	
 	private final static int[] dx = {-1,0,1,1,1,0,-1,-1};
 	private final static int[] dy = {-1,-1,-1,0,1,1,1,0};
@@ -804,8 +817,8 @@ public class Layer {
 	}
 	
 	public Layer getShortestPath(int fromX, int fromY, int toX, int toY) {
-		Point startingPoint = new Point(fromX, fromY); // STRANGE!
-		Point endingPoint = new Point(toX, toY); // STRANGE!
+		Point startingPoint = new Point(fromX, fromY);
+		Point endingPoint = new Point(toX, toY);
 		
 		if (!isValidPoint(startingPoint) || !isValidPoint(endingPoint)) 
 			return null;
@@ -815,10 +828,10 @@ public class Layer {
 		
 		for (int i=0; i<8; i++) {
 			// calculate coordinates
-			outLayer.values[startingPoint.y + dy[i]][startingPoint.x + dx[i]] = 2;
-			outLayer.values[endingPoint.y + dy[i]][endingPoint.x + dx[i]] = 2;
+			outLayer.values[startingPoint.y + dy[i]][startingPoint.x + dx[i]] = shortestPoint;
+			outLayer.values[endingPoint.y + dy[i]][endingPoint.x + dx[i]] = shortestPoint;
 		}
-		
+				
 		Layer visited = new Layer("visitedLayer", nRows, nCols, originX,
 				originY, resolution, 0);
 
@@ -843,6 +856,8 @@ public class Layer {
 		
 		boolean foundRoadFromStarting = false;
 		Point startOnRoad = null;
+		
+		// TODO: Need to find all possible shortest way to road
 		
 		// find the possible shortest way to road
 		while (!currentPoint.isEqual(endingPoint) && !candidates.isEmpty()) {
@@ -1033,13 +1048,13 @@ public class Layer {
 		}
 		
 		// weight.map();
-
+		
 		// trace back the shortest way
 		if (foundWayFromEnding) {
 			
 			// trace back from endingOnRoad to starting Point
 			while (visited.getPoint(endingOnRoad) != 1000) {
-				outLayer.setPoint(endingOnRoad, 1);
+				outLayer.setPoint(endingOnRoad, shortestValue);
 				int direction = (int) visited.getPoint(endingOnRoad); 
 				switch (direction) {
 				case 100: 
@@ -1080,7 +1095,7 @@ public class Layer {
 			// trace back from endingFromRoad to ending Point
 
 			while (visited.getPoint(endingFromRoad) != 1000) {
-				outLayer.setPoint(endingFromRoad, 1);
+				outLayer.setPoint(endingFromRoad, shortestValue);
 				int direction = (int) visited.getPoint(endingFromRoad); 
 				switch (direction) {
 				case 100: 
@@ -1122,11 +1137,11 @@ public class Layer {
 		return outLayer;
 	}
 
-	public void merge(Layer layer) {
+	public void mergeShortest(Layer layer) {
 		for (int i = 0; i < nRows; i++) { // loop nRows
 			for (int j = 0; j < nCols; j++) { // loop nCols
 				if (i<layer.nRows && j<layer.nCols) {
-					if (layer.values[i][j] != layer.nullValue) {
+					if (layer.values[i][j] == shortestPoint || layer.values[i][j] == shortestValue ) {
 						this.values[i][j] = layer.values[i][j];
 					}
 				}
