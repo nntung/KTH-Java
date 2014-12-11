@@ -8,22 +8,29 @@ public class LayerListModel extends DefaultListModel<Layer> {
 	 */
 	private static final long serialVersionUID = 1L;
 	
-	public static void up(int selectedIndex) {
-		if (selectedIndex == -1) return;
-	
+	public boolean up(int selectedIndex) {
+		if (selectedIndex == 0) return false;
+		Layer selectedLayer = get(selectedIndex);
+		remove(selectedIndex);
+		add(selectedIndex-1, selectedLayer);
+		return true;
 	}
 
-	public static void down(int selectedIndex) {
-		if (selectedIndex == -1) return;
-	
+	public boolean down(int selectedIndex) {
+		int lastIndex = getSize() - 1;
+		if (selectedIndex == lastIndex) return false;
+		Layer selectedLayer = get(selectedIndex);
+		remove(selectedIndex);
+		add(selectedIndex+1, selectedLayer);
+		return true;
 	}
 	
-	public static void save() {
+	public void save() {
 		// TODO
 		
 	}
 	
-	public static void load() {
+	public void load() {
 		// TODO
 		
 	}

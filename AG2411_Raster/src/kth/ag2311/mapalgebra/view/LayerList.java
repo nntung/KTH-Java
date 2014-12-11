@@ -14,7 +14,6 @@ import java.net.URL;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
-import javax.swing.DefaultListModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -119,7 +118,10 @@ public class LayerList extends JDialog {
 				btnRemove.addActionListener(new ActionListener() {
 		            @Override
 		            public void actionPerformed(ActionEvent event) {
-		            	removeLayerFromList();
+		        		int selectedIndex = listLayer.getSelectedIndex();
+		        		if (selectedIndex<0) return;
+		        		layerListModel.remove(selectedIndex);
+		        		// need to render map again
 		            }
 		        });
 			}
@@ -131,12 +133,34 @@ public class LayerList extends JDialog {
 				btnUp.setIcon(iconUp);
 				btnUp.setToolTipText("Move a layer UP");
 				toolBar.add(btnUp);
+
+				btnUp.addActionListener(new ActionListener() {
+		            @Override
+		            public void actionPerformed(ActionEvent event) {
+		        		int selectedIndex = listLayer.getSelectedIndex();
+		        		if (selectedIndex<0) return;
+		        		boolean isDone = layerListModel.up(selectedIndex);
+		            	if (isDone) listLayer.setSelectedIndex(selectedIndex - 1);
+		        		// need to render map again
+		            }
+		        });
 			}
 			{
 				JButton btnDown = new JButton();
 				btnDown.setIcon(iconDown);
 				btnDown.setToolTipText("Move a layer DOWN");
 				toolBar.add(btnDown);
+
+				btnDown.addActionListener(new ActionListener() {
+		            @Override
+		            public void actionPerformed(ActionEvent event) {
+		        		int selectedIndex = listLayer.getSelectedIndex();
+		        		if (selectedIndex<0) return;
+		        		boolean isDone = layerListModel.down(selectedIndex);
+		        		if (isDone) listLayer.setSelectedIndex(selectedIndex + 1);
+		            	// need to render map again
+		            }
+		        });
 			}
 		}
 		{
@@ -193,10 +217,6 @@ public class LayerList extends JDialog {
 		}
 	}
 	
-	private void updateToolbarButtons() {
-		
-	}
-	
 	private void importLayerFromFile() {
 		JFileChooser fileopen = new JFileChooser();
         FileFilter filter = new FileNameExtensionFilter("raster ASCII files", "txt");
@@ -221,17 +241,6 @@ public class LayerList extends JDialog {
         		JOptionPane.showMessageDialog(this, msg, "Error Message", JOptionPane.ERROR_MESSAGE);
         	}
         }
-        
-        updateToolbarButtons();
-	}
-	
-	private void removeLayerFromList() {
-		// get selected index
-		int selectedIndex = listLayer.getSelectedIndex();
-		if (selectedIndex<0) return;
-		layerListModel.remove(selectedIndex);
-		
-		// need to render again ?
 	}
 
 }

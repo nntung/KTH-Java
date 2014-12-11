@@ -166,32 +166,9 @@ public class PicnicGIS {
 	    		}
 	    	});
 	    	mnApp.add(mntmExit);
-	    	
-	    	JMenu mnLayer = new JMenu("Layer");
-	    	menuBar.add(mnLayer);
-	    	
+	    		    	
 	    	JMenu mnView = new JMenu("View");
 	    	menuBar.add(mnView);
-	    	
-	    	JMenuItem mntmLoad = new JMenuItem("Load");
-	    	mntmLoad.addActionListener(new ActionListener() {
-	    		public void actionPerformed(ActionEvent e) {
-	    			JFileChooser fileopen = new JFileChooser();
-	                FileFilter filter = new FileNameExtensionFilter("raster ASCII files", "txt");
-	                fileopen.addChoosableFileFilter(filter);
-	                fileopen.setCurrentDirectory(new File("c:/DataJava"));
-
-	                int ret = fileopen.showDialog(appFrame, "Open raster file");
-
-	                if (ret == JFileChooser.APPROVE_OPTION) {
-	                	File selectedFile = fileopen.getSelectedFile();
-	                	// TODO: Loading file!
-	                	loadLayer(selectedFile);
-	                }
-	    		}
-	    	});
-	    	mntmLoad.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, InputEvent.CTRL_MASK));
-	    	mnLayer.add(mntmLoad);
 	    	
 	    	menuBar.add(Box.createHorizontalGlue());
 	    	
@@ -248,12 +225,4 @@ public class PicnicGIS {
 		
 	}
 	
-	private void loadLayer(File file) {
-		String name = file.getName();
-		int pos = name.lastIndexOf(".");
-		name = (pos > 0) ? name.substring(0, pos) : name;
-		String path = file.getAbsolutePath();
-
-	}
-
 }
