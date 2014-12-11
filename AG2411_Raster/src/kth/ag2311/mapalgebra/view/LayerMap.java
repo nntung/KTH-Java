@@ -9,6 +9,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import kth.ag2311.mapalgebra.model.Layer;
+import kth.ag2311.mapalgebra.model.LayerListModel;
 
 public class LayerMap extends JPanel {
 
@@ -20,18 +21,40 @@ public class LayerMap extends JPanel {
 	/**
 	 * Create the panel.
 	 */
-	private BufferedImage image;
-	private Layer layer;
+	private BufferedImage imageMap;
+	private LayerListModel layerListModel;
+	private int drawX, drawY;
 	
-	public void setLayerListModel(Layer layer) {
-
+	public void setLayerListModel(LayerListModel layersModel) {
+		this.layerListModel = layersModel;
 	}
 	
-	public void updateImage() {
+	public void renderImageMap() {
+		int numberOfLayers = layerListModel.getSize();
+		if (numberOfLayers == 0) return;
+		
+		Layer firstLayer = layerListModel.elementAt(0);
+		int width = firstLayer.nCols;
+		int heigth = firstLayer.nRows;
+		imageMap = new BufferedImage(width, heigth, BufferedImage.TYPE_INT_ARGB);
+		Graphics2D gbi = imageMap.createGraphics();
+		int idx = numberOfLayers - 1;
+		while (idx>=0) {
+			Layer layer = layerListModel.elementAt(idx);
+			if (layer.isViewOnMap)
+				gbi.drawImage(layer.imageMap, 0, 0, null);
+			idx--;
+		}
+	}
+	
+	public void scaleImageMap() {
 		
 	}
 	
 	public LayerMap (JFrame parent) {
+		imageMap = null;
+		drawX = 0;
+		drawY = 0;
 		init(parent);
 	}
 	
@@ -42,8 +65,8 @@ public class LayerMap extends JPanel {
     private void doDrawing(Graphics g) {
 
         Graphics2D g2d = (Graphics2D) g;
-        if (layer != null) {
-        	
+        if (imageMap != null) {
+        	g2d.drawImage(imageMap, drawX, drawY, null);        	
 
         } else {
         	g2d.drawString("Add layer into Layer List", 50, 50);

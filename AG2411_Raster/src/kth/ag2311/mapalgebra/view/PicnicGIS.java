@@ -218,6 +218,8 @@ public class PicnicGIS {
 	        });
 	        
 	        layerList.setVisible(true);
+	        layerList.setLayerMap(layerMap);
+	        layerMap.setLayerListModel(layerList.getLayerListModel());
 	        
 	    } catch (Exception ex) {
 	    	ex.printStackTrace();

@@ -185,6 +185,10 @@ public class LayerList extends JDialog {
 							item.isViewOnMap = !item.isViewOnMap;
 							Rectangle rect = listLayer.getCellBounds(index, index);
 							listLayer.repaint(rect);
+							
+							// update layerMap
+							layerMap.renderImageMap();
+							layerMap.repaint();
 						}
 					}
 				});
@@ -235,12 +239,26 @@ public class LayerList extends JDialog {
     		
         	Layer layer = new Layer(name, path);
         	if (layer.isImportSucessful) {
+        		layer.name = layer.name + " (" + layer.nCols + "x" + layer.nRows + ")";
         		layerListModel.addElement(layer);
+        		
+        		// render map of layer
+        		layer.renderMap();
+        		
         	} else {
         		String msg = "ERROR! Cannot import layer from " + path;
         		JOptionPane.showMessageDialog(this, msg, "Error Message", JOptionPane.ERROR_MESSAGE);
         	}
         }
+	}
+
+	public LayerListModel getLayerListModel() {
+		return this.layerListModel;
+	}
+	
+	private LayerMap layerMap;
+	public void setLayerMap(LayerMap layermap) {
+		layerMap = layermap;
 	}
 
 }

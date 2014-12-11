@@ -1161,5 +1161,37 @@ public class Layer {
 	public String toString() {
 		return name;
 	}
+	
+	private final static int defaultAlpha = 250;
+	public BufferedImage imageMap;
+	public void renderMap() {
+		imageMap = new BufferedImage(nCols, nRows, BufferedImage.TYPE_INT_ARGB);
+		WritableRaster raster = imageMap.getRaster();
+
+		double grayscale = maxGray ;
+		if (maxValue > minValue)
+			grayscale = maxGray / (maxValue - minValue);
+
+		// write data to raster
+		int[] color = new int[4];
+		for (int i = 0; i < nRows; i++) { // loop nRows
+			for (int j = 0; j < nCols; j++) { // loop nCols
+				// create color for this point
+				if (values[i][j] == nullValue) {
+					color[0] = nullGray[0]; // Alpha
+					color[1] = nullGray[1]; // Red
+					color[2] = nullGray[2]; // Green
+					color[3] = 0; // Blue
+				} else {
+					int value = (int) (values[i][j] * grayscale);
+					color[0] = value; // Alpha
+					color[1] = value; // Red
+					color[2] = value; // Green
+					color[3] = defaultAlpha; // 250
+				}
+				raster.setPixel(j, i, color);
+			}
+		}
+	}
 
 }
