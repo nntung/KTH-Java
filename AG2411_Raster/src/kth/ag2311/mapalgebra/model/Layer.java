@@ -80,6 +80,8 @@ public class Layer {
 	 * min value of matrix values
 	 */
 	public double minValue;
+	
+	public boolean isImportSucessful;
 
 	// //////////////////////////////////////////
 	// Methods
@@ -183,10 +185,20 @@ public class Layer {
 					}
 				}
 			}
+			
+			// get max and min value
+			getMax();
+			getMin();
+
+			isImportSucessful = true;
+			
+			System.out.println("Loaded!");
 
 		} catch (NumberFormatException ex) {
+			isImportSucessful = false;
 			ex.printStackTrace();
 		} catch (IOException ex) {
+			isImportSucessful = false;
 			ex.printStackTrace();
 		} finally {
 			try {
@@ -195,12 +207,6 @@ public class Layer {
 				e.printStackTrace();
 			}
 		}
-		
-		// get max and min value
-		getMax();
-		getMin();
-
-		System.out.println("Loaded!");
 	}
 
 	/**
@@ -1147,6 +1153,13 @@ public class Layer {
 				}
 			}
 		}
+	}
+	
+	public boolean isViewOnMap;
+	
+	@Override
+	public String toString() {
+		return name;
 	}
 
 }

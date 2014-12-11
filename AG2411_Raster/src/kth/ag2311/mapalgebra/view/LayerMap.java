@@ -2,6 +2,7 @@ package kth.ag2311.mapalgebra.view;
 
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
 
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -19,10 +20,15 @@ public class LayerMap extends JPanel {
 	/**
 	 * Create the panel.
 	 */
+	private BufferedImage image;
 	private Layer layer;
 	
-	public void setLayer(Layer layer) {
-		this.layer = layer;
+	public void setLayerListModel(Layer layer) {
+
+	}
+	
+	public void updateImage() {
+		
 	}
 	
 	public LayerMap (JFrame parent) {
@@ -37,25 +43,10 @@ public class LayerMap extends JPanel {
 
         Graphics2D g2d = (Graphics2D) g;
         if (layer != null) {
-        	for (int i = 0; i < layer.nRows; i++) { // loop nRows
-    			for (int j = 0; j < layer.nCols; j++) { // loop nCols
-    				// create color for this point
-    				if (layer.values[i][j] == layer.nullValue) {
-    					color[0] = nullGray[0]; // Red
-    					color[1] = nullGray[1]; // Green
-    					color[2] = nullGray[2]; // Blue
-    				} else {
-    					int value = (int) (values[i][j] * grayscale);
-    					color[0] = value; // Red
-    					color[1] = value; // Green
-    					color[2] = value; // Blue
-    				}
-    				raster.setPixel(j, i, color);
-    			}
-    		}
+        	
 
         } else {
-        	g2d.drawString("Java 2D", 50, 50);
+        	g2d.drawString("Add layer into Layer List", 50, 50);
         }
     }
 
