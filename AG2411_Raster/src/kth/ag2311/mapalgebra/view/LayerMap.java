@@ -116,8 +116,10 @@ public class LayerMap extends JPanel {
 	}
 	
     private void doDrawing(Graphics g) {
-    	int numberOfLayers = layerListModel.getSize();
+    	if (layerListModel == null)  return;
         Graphics2D g2d = (Graphics2D) g;
+    	
+    	int numberOfLayers = layerListModel.getSize();
         if (numberOfLayers>0 && imageMap != null) {
         	if (scale>1)
         		g2d.drawImage(scaleMap, drawX, drawY, null);        	

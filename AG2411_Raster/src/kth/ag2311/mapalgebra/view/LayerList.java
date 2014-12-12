@@ -65,11 +65,6 @@ public class LayerList extends JDialog {
 			JToolBar toolBar = new JToolBar();
 			toolBar.setFloatable(false);
 			
-		    URL urlLoad = ClassLoader.getSystemResource("images/folder.png");
-	        ImageIcon iconLoad = new ImageIcon(urlLoad);
-		    URL urlSave = ClassLoader.getSystemResource("images/save_floppy_disk.png");
-	        ImageIcon iconSave = new ImageIcon(urlSave);
-	        
 		    URL urlAdd = ClassLoader.getSystemResource("images/plus.png");
 	        ImageIcon iconAdd = new ImageIcon(urlAdd);
 		    URL urlRemove = ClassLoader.getSystemResource("images/delete.png");
@@ -81,20 +76,6 @@ public class LayerList extends JDialog {
 	        ImageIcon iconDown = new ImageIcon(urlDown);
 
 	        contentPanel.add(toolBar,BorderLayout.NORTH);
-			{
-				JButton btnLoad = new JButton();
-				btnLoad.setIcon(iconLoad);
-				btnLoad.setToolTipText("Load Layer List");
-				toolBar.add(btnLoad);
-			}
-			{
-				JButton btnSave = new JButton();
-				btnSave.setIcon(iconSave);
-				btnSave.setToolTipText("Save Layer List");
-				toolBar.add(btnSave);
-			}
-
-			toolBar.add(new JSeparator(SwingConstants.VERTICAL));
 			
 			{
 				JButton btnAdd = new JButton();

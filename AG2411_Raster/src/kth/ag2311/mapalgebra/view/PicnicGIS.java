@@ -46,7 +46,7 @@ import kth.ag2311.mapalgebra.model.Layer;
 public class PicnicGIS {
 
 	private JFrame appFrame;
-	private LayerList layerList;
+	private LayerPane layerPane;
 	private LayerMap layerMap;
 	private JLabel statusbar;
 	private boolean isMouseSelect;
@@ -84,7 +84,6 @@ public class PicnicGIS {
 		appFrame.setMinimumSize(new Dimension(640, 480));
 		appFrame.setBounds(100, 100, 800, 600);
 		appFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		layerList = new LayerList(appFrame);
 		
 		// set application icon
 	    URL urlIcon = ClassLoader.getSystemResource("images/picnic.png");
@@ -113,6 +112,26 @@ public class PicnicGIS {
 
 	        appFrame.getContentPane().add(toolBar,BorderLayout.NORTH);
 			{
+				URL urlLoad = ClassLoader.getSystemResource("images/folder.png");
+		        ImageIcon iconLoad = new ImageIcon(urlLoad);
+			    URL urlSave = ClassLoader.getSystemResource("images/save_floppy_disk.png");
+		        ImageIcon iconSave = new ImageIcon(urlSave);
+				
+		        {
+					JButton btnLoad = new JButton();
+					btnLoad.setIcon(iconLoad);
+					btnLoad.setToolTipText("Load Layer List");
+					toolBar.add(btnLoad);
+				}
+				{
+					JButton btnSave = new JButton();
+					btnSave.setIcon(iconSave);
+					btnSave.setToolTipText("Save Layer List");
+					toolBar.add(btnSave);
+				}
+				
+				toolBar.add(new JSeparator(SwingConstants.VERTICAL));
+				
 				JToggleButton btnMouseSelect = new JToggleButton();
 				JToggleButton btnMouseMove = new JToggleButton();
 
@@ -180,7 +199,7 @@ public class PicnicGIS {
 				JButton btnCentralize = new JButton();
 				btnCentralize.setIcon(iconCenteralize);
 				btnCentralize.setToolTipText("Go to Central of a map");
-				toolBar.add(btnCentralize);
+				//toolBar.add(btnCentralize);
 				btnCentralize.addActionListener(new ActionListener() {
 		    		public void actionPerformed(ActionEvent e) {
 		    			layerMap.setDrawingPoint(0, 0);
@@ -243,25 +262,20 @@ public class PicnicGIS {
 	        mntmcbLayerManager.addActionListener(new ActionListener() {
 	            @Override
 	            public void actionPerformed(ActionEvent event) {
-	              if (layerList.isVisible()) {
-	            	  layerList.setVisible(false);
+	              if (layerPane.isVisible()) {
+	            	  layerPane.setVisible(false);
 	              } else {
-	            	  layerList.setVisible(true);
+	            	  layerPane.setVisible(true);
 	              }
 	            }
 	        });
 	        mnView.add(mntmcbLayerManager);
 	        
-	        layerList.addWindowListener(new WindowAdapter() {
-	            @Override
-	            public void windowClosing(WindowEvent e) {
-	            	mntmcbLayerManager.setState(false);
-	            }
-	        });
-	        
-	        layerList.setVisible(true);
-	        layerList.setLayerMap(layerMap);
-	        layerMap.setLayerListModel(layerList.getLayerListModel());
+	        layerPane = new LayerPane(appFrame);
+	        appFrame.getContentPane().add(layerPane, BorderLayout.EAST);
+	        layerPane.setVisible(true);
+	        layerPane.setLayerMap(layerMap);
+	        layerMap.setLayerListModel(layerPane.getLayerListModel());
 	        
 	    } catch (Exception ex) {
 	    	ex.printStackTrace();
