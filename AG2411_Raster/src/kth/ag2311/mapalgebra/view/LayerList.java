@@ -142,6 +142,8 @@ public class LayerList extends JDialog {
 		        		boolean isDone = layerListModel.up(selectedIndex);
 		            	if (isDone) listLayer.setSelectedIndex(selectedIndex - 1);
 		        		// need to render map again
+		            	layerMap.renderImageMap();
+						layerMap.repaint();
 		            }
 		        });
 			}
@@ -159,6 +161,8 @@ public class LayerList extends JDialog {
 		        		boolean isDone = layerListModel.down(selectedIndex);
 		        		if (isDone) listLayer.setSelectedIndex(selectedIndex + 1);
 		            	// need to render map again
+		        		layerMap.renderImageMap();
+						layerMap.repaint();
 		            }
 		        });
 			}
@@ -225,7 +229,7 @@ public class LayerList extends JDialog {
 		JFileChooser fileopen = new JFileChooser();
         FileFilter filter = new FileNameExtensionFilter("raster ASCII files", "txt");
         fileopen.addChoosableFileFilter(filter);
-        fileopen.setCurrentDirectory(new File("c:/DataJava"));
+        fileopen.setCurrentDirectory(new File("C:/Users/NGA_TUNG/Documents/GitHub/KTH-Java/data"));
 
         int ret = fileopen.showDialog(this, "Open raster file");
 

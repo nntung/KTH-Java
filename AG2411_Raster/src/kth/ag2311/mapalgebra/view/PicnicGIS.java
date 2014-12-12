@@ -35,6 +35,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseMotionListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -46,6 +49,9 @@ public class PicnicGIS {
 	private LayerList layerList;
 	private LayerMap layerMap;
 	private JLabel statusbar;
+	private boolean isMouseSelect;
+	private boolean isReadyToMove;
+	private int disX, disY;
 	
 	/**
 	 * Launch the application.
@@ -108,30 +114,64 @@ public class PicnicGIS {
 	        appFrame.getContentPane().add(toolBar,BorderLayout.NORTH);
 			{
 				JToggleButton btnMouseSelect = new JToggleButton();
+				JToggleButton btnMouseMove = new JToggleButton();
+
+				isMouseSelect = true;
+				isReadyToMove = false;
+				
 				btnMouseSelect.setIcon(iconMouseSelect);
 				btnMouseSelect.setToolTipText("Select on map");
 				toolBar.add(btnMouseSelect);
-			}
-			{
-				JToggleButton btnMouseMove = new JToggleButton();
+				btnMouseSelect.setSelected(true);
+				btnMouseSelect.addActionListener(new ActionListener() {
+		    		public void actionPerformed(ActionEvent e) {
+		    			btnMouseSelect.setSelected(true);
+						btnMouseMove.setSelected(false);
+						isMouseSelect = true;
+						layerMap.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+		    		}
+		    	});
+				
 				btnMouseMove.setIcon(iconMouseMove);
 				btnMouseMove.setToolTipText("Move map");
 				toolBar.add(btnMouseMove);
+				btnMouseMove.setSelected(false);
+				btnMouseMove.addActionListener(new ActionListener() {
+		    		public void actionPerformed(ActionEvent e) {
+		    			btnMouseSelect.setSelected(false);
+						btnMouseMove.setSelected(true);
+						isMouseSelect = false;
+						layerMap.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		    		}
+		    	});
+
 			}
 
 			toolBar.add(new JSeparator(SwingConstants.VERTICAL));
 			
 			{
-				JToggleButton btnZoomIn = new JToggleButton();
+				JButton btnZoomIn = new JButton();
 				btnZoomIn.setIcon(iconZomeIn);
 				btnZoomIn.setToolTipText("Zoom In");
 				toolBar.add(btnZoomIn);
+				btnZoomIn.addActionListener(new ActionListener() {
+		    		public void actionPerformed(ActionEvent e) {
+		    			layerMap.zoomIn();
+		    			layerMap.repaint();
+		    		}
+		    	});
 			}
 			{
-				JToggleButton btnZoomOut = new JToggleButton();
+				JButton btnZoomOut = new JButton();
 				btnZoomOut.setIcon(iconZoomOut);
 				btnZoomOut.setToolTipText("Zoom Out");
 				toolBar.add(btnZoomOut);
+				btnZoomOut.addActionListener(new ActionListener() {
+		    		public void actionPerformed(ActionEvent e) {
+		    			layerMap.zoomOut();
+		    			layerMap.repaint();
+		    		}
+		    	});
 			}
 			
 			toolBar.add(new JSeparator(SwingConstants.VERTICAL));
@@ -141,17 +181,19 @@ public class PicnicGIS {
 				btnCentralize.setIcon(iconCenteralize);
 				btnCentralize.setToolTipText("Go to Central of a map");
 				toolBar.add(btnCentralize);
+				btnCentralize.addActionListener(new ActionListener() {
+		    		public void actionPerformed(ActionEvent e) {
+		    			layerMap.setDrawingPoint(0, 0);
+		    			layerMap.repaint();
+		    		}
+		    	});
 			}
 		
 	    	
 	    	layerMap = new LayerMap(appFrame);
 	    	appFrame.getContentPane().add(layerMap, BorderLayout.CENTER);
-	    	//layerMap.setCursor(new Cursor(Cursor.HAND_CURSOR));
-	    	/*Toolkit toolkit = layerMap.getToolkit();
-	    	Image image = toolkit.getImage("images/pencil.gif");
-	    	Cursor cc = toolkit.createCustomCursor(image, new Point(0,0), "img");
-	    	layerMap.setCursor(cc);*/
-	    	  
+	    	settingMouseEventToLayerMap();
+	    	
 	    	JMenuBar menuBar = new JMenuBar();
 	    	appFrame.setJMenuBar(menuBar);
 	    	
@@ -225,6 +267,75 @@ public class PicnicGIS {
 	    	ex.printStackTrace();
 	    }
 		
+	}
+	
+	private void settingMouseEventToLayerMap() {
+		if (layerMap == null) return;
+		
+		layerMap.addMouseListener(new MouseListener() {
+		    @Override
+		    public void mouseClicked(MouseEvent e) {
+		    	int x=e.getX();
+		        int y=e.getY();
+		        String text = null;
+		        if (isMouseSelect) {
+		        }
+		    }
+
+			@Override
+			public void mouseEntered(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mouseExited(MouseEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				disX = e.getX() - layerMap.getDrawX();
+		        disY = e.getY() - layerMap.getDrawY();
+		        if (!isMouseSelect) {
+		        	isReadyToMove = true;
+		        	layerMap.setCursor(new Cursor(Cursor.MOVE_CURSOR));
+		        }
+				
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent e) {
+		        if (!isMouseSelect) {
+		        	isReadyToMove = false;
+		        	layerMap.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		        }
+			}
+		});
+		
+		layerMap.addMouseMotionListener(new MouseMotionListener() {
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				int x = e.getX() - disX;
+		        int y = e.getY() - disY;
+		        if (!isMouseSelect) {
+					if (isReadyToMove) {
+			        	layerMap.setDrawingPoint(x, y);
+			        	layerMap.repaint();
+		        	}
+		        }
+				
+			}
+
+			@Override
+			public void mouseMoved(MouseEvent e) {
+		    	
+		        					
+			}
+			
+		});
 	}
 	
 }
