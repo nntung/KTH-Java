@@ -275,11 +275,7 @@ public class PicnicGIS {
 		layerMap.addMouseListener(new MouseListener() {
 		    @Override
 		    public void mouseClicked(MouseEvent e) {
-		    	int x=e.getX();
-		        int y=e.getY();
-		        String text = null;
-		        if (isMouseSelect) {
-		        }
+		    	
 		    }
 
 			@Override
