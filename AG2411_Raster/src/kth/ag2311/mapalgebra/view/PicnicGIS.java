@@ -5,14 +5,12 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.FlowLayout;
-import java.awt.Image;
-import java.awt.Point;
-import java.awt.Toolkit;
 import java.io.File;
 import java.net.URL;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
@@ -22,6 +20,7 @@ import javax.swing.JLabel;
 import javax.swing.JMenuBar;
 import javax.swing.JMenu;
 import javax.swing.JMenuItem;
+import javax.swing.JPanel;
 import javax.swing.JSeparator;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
@@ -38,20 +37,29 @@ import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 
-import kth.ag2311.mapalgebra.model.Layer;
+import kth.ag2311.mapalgebra.model.GeneralLayers;
+import kth.ag2311.mapalgebra.model.LayerListModel;
+import kth.ag2311.mapalgebra.model.LayerManager;
+import kth.ag2311.mapalgebra.model.LayerProperty;
+import kth.ag2311.mapalgebra.model.Point;
 
 public class PicnicGIS {
 
 	private JFrame appFrame;
-	private LayerPane layerPane;
+	private LayerPanel layerPane;
 	private LayerMap layerMap;
-	private JLabel statusbar;
+	private JPanel statusPanel;
+	private JPanel statusXYZoom;
+	private JLabel statusText;
+	private JLabel statusZoom;
+	private JLabel statusX;
+	private JLabel statusY;
+	
 	private boolean isMouseSelect;
 	private boolean isReadyToMove;
 	private int disX, disY;
+	private LayerManager layerManager;
 	
 	/**
 	 * Launch the application.
@@ -82,7 +90,7 @@ public class PicnicGIS {
 	private void initialize() {
 		appFrame = new JFrame();
 		appFrame.setMinimumSize(new Dimension(640, 480));
-		appFrame.setBounds(100, 100, 800, 600);
+		appFrame.setBounds(100, 100, 800, 800);
 		appFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		// set application icon
@@ -92,7 +100,8 @@ public class PicnicGIS {
 	    try {
 	    	appFrame.getContentPane().setLayout(new BorderLayout());
 	    	appFrame.setIconImage(icon.getImage());
-	    	
+	    	appFrame.setTitle("PicnicGIS");
+	   
 	    	JToolBar toolBar = new JToolBar();
 			toolBar.setFloatable(false);
 			toolBar.setLayout(new FlowLayout(FlowLayout.LEFT));
@@ -122,12 +131,22 @@ public class PicnicGIS {
 					btnLoad.setIcon(iconLoad);
 					btnLoad.setToolTipText("Load Layer List");
 					toolBar.add(btnLoad);
+					btnLoad.addActionListener(new ActionListener() {
+			    		public void actionPerformed(ActionEvent e) {
+			    			loadLayerManager();
+			    		}
+			    	});
 				}
 				{
 					JButton btnSave = new JButton();
 					btnSave.setIcon(iconSave);
 					btnSave.setToolTipText("Save Layer List");
 					toolBar.add(btnSave);
+					btnSave.addActionListener(new ActionListener() {
+			    		public void actionPerformed(ActionEvent e) {
+			    			saveLayerManager();
+			    		}
+			    	});
 				}
 				
 				toolBar.add(new JSeparator(SwingConstants.VERTICAL));
@@ -177,6 +196,10 @@ public class PicnicGIS {
 		    		public void actionPerformed(ActionEvent e) {
 		    			layerMap.zoomIn();
 		    			layerMap.repaint();
+		    			
+		    			// update zoom status
+		    			int zoom = layerMap.scale * 100;
+		    			statusZoom.setText("Zoom: " + zoom + "%");
 		    		}
 		    	});
 			}
@@ -189,11 +212,64 @@ public class PicnicGIS {
 		    		public void actionPerformed(ActionEvent e) {
 		    			layerMap.zoomOut();
 		    			layerMap.repaint();
+
+		    			// update zoom status
+		    			int zoom = layerMap.scale * 100;
+		    			statusZoom.setText("Zoom: " + zoom + "%");
 		    		}
 		    	});
 			}
 			
 			toolBar.add(new JSeparator(SwingConstants.VERTICAL));
+			
+			URL urlPinicMap = ClassLoader.getSystemResource("images/picnicmap.png");
+	        ImageIcon iconPicnicMap = new ImageIcon(urlPinicMap);
+		    URL urlShortestPath = ClassLoader.getSystemResource("images/shortest.png");
+	        ImageIcon iconShortestPath = new ImageIcon(urlShortestPath);
+	        URL urlCompass = ClassLoader.getSystemResource("images/compass.png");
+	        ImageIcon iconCompass = new ImageIcon(urlCompass);
+			
+	        {
+				JToggleButton btnAspect = new JToggleButton();
+				btnAspect.setIcon(iconCompass);
+				btnAspect.setToolTipText("Show aspect map");
+				toolBar.add(btnAspect);
+				btnAspect.addActionListener(new ActionListener() {
+		    		public void actionPerformed(ActionEvent e) {
+		    			//TODO Show Picnic map
+		    		}
+		    	});
+			}
+	        {
+				JToggleButton btnPicnicMap = new JToggleButton();
+				btnPicnicMap.setIcon(iconPicnicMap);
+				btnPicnicMap.setToolTipText("Show picnic map");
+				toolBar.add(btnPicnicMap);
+				btnPicnicMap.addActionListener(new ActionListener() {
+		    		public void actionPerformed(ActionEvent e) {
+		    			//TODO Show Picnic map
+		    		}
+		    	});
+			}
+			{
+				JToggleButton btnShortestMap = new JToggleButton();
+				btnShortestMap.setIcon(iconShortestPath);
+				btnShortestMap.setToolTipText("Show shortest path");
+				toolBar.add(btnShortestMap);
+				btnShortestMap.addActionListener(new ActionListener() {
+		    		public void actionPerformed(ActionEvent e) {
+		    			if (btnShortestMap.isSelected()) {
+		    				layerMap.showPath = true;
+		    				layerMap.renderImageMap();
+		    				layerMap.repaint();
+		    			} else {
+		    				layerMap.showPath = false;
+		    				layerMap.renderImageMap();
+		    				layerMap.repaint();
+		    			}
+		    		}
+		    	});
+			}
 			
 			{
 				JButton btnCentralize = new JButton();
@@ -212,12 +288,33 @@ public class PicnicGIS {
 	    	layerMap = new LayerMap(appFrame);
 	    	appFrame.getContentPane().add(layerMap, BorderLayout.CENTER);
 	    	settingMouseEventToLayerMap();
+	    	GeneralLayers.generalLayer = layerMap;
 	    	
 	    	JMenuBar menuBar = new JMenuBar();
 	    	appFrame.setJMenuBar(menuBar);
 	    	
 	    	JMenu mnApp = new JMenu("App");
 	    	menuBar.add(mnApp);
+	    	
+	    	JMenuItem mntmLoadMap = new JMenuItem("Load Map");
+	    	mntmLoadMap.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, InputEvent.CTRL_MASK));
+	    	mntmLoadMap.addActionListener(new ActionListener() {
+	    		public void actionPerformed(ActionEvent e) {
+	    			loadLayerManager();
+	    		}
+	    	});
+	    	mnApp.add(mntmLoadMap);
+	    	
+	    	JMenuItem mntmSaveMap = new JMenuItem("Save Map");
+	    	mntmSaveMap.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_MASK));
+	    	mntmSaveMap.addActionListener(new ActionListener() {
+	    		public void actionPerformed(ActionEvent e) {
+	    			saveLayerManager();
+	    		}
+	    	});
+	    	mnApp.add(mntmSaveMap);
+
+	    	mnApp.add(new JSeparator());
 	    	
 	    	JMenuItem mntmExit = new JMenuItem("Exit");
 	    	mntmExit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_MASK));
@@ -227,7 +324,7 @@ public class PicnicGIS {
 	    		}
 	    	});
 	    	mnApp.add(mntmExit);
-	    		    	
+	    	
 	    	JMenu mnView = new JMenu("View");
 	    	menuBar.add(mnView);
 	    	
@@ -236,10 +333,36 @@ public class PicnicGIS {
 	    	JMenu mnHelp = new JMenu("Help");
 	    	menuBar.add(mnHelp);
 	    	
-	    	statusbar = new JLabel("Statusbar");
-	    	statusbar.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
-	    	statusbar.setVisible(true);
-	    	appFrame.getContentPane().add(statusbar, BorderLayout.SOUTH);
+	    	statusPanel = new JPanel();
+	    	appFrame.getContentPane().add(statusPanel, BorderLayout.SOUTH);
+	    	statusPanel.setLayout(new BorderLayout());
+	    	statusPanel.setVisible(true);
+	    	
+	    	statusXYZoom = new JPanel();
+	    	statusXYZoom.setLayout(new BoxLayout(statusXYZoom, BoxLayout.LINE_AXIS));
+	    	statusXYZoom.setVisible(true);
+	    	statusPanel.add(statusXYZoom, BorderLayout.WEST);
+	    	
+	    	statusX = new JLabel("X = ");
+	    	statusX.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
+	    	statusX.setVisible(true);
+	    	statusXYZoom.add(statusX);
+	    	statusXYZoom.add(Box.createHorizontalStrut(5));
+	    	statusY = new JLabel("Y = ");
+	    	statusY.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
+	    	statusY.setVisible(true);
+	    	statusXYZoom.add(statusY);
+	    	statusXYZoom.add(Box.createHorizontalStrut(5));
+	    	statusZoom = new JLabel("Zoom: 100%");
+	    	statusZoom.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
+	    	statusZoom.setVisible(true);
+	    	statusXYZoom.add(statusZoom);
+	    	statusXYZoom.add(Box.createHorizontalStrut(5));
+	    	
+	    	statusText = new JLabel("Ready");
+	    	statusText.setBorder(BorderFactory.createEtchedBorder(EtchedBorder.RAISED));
+	    	statusText.setVisible(true);
+	    	statusPanel.add(statusText, BorderLayout.CENTER);
 	    	
 	        JCheckBoxMenuItem mntmcbStatusBar = new JCheckBoxMenuItem("show Status Bar");
 	        mntmcbStatusBar.setState(true);
@@ -247,10 +370,10 @@ public class PicnicGIS {
 	        mntmcbStatusBar.addActionListener(new ActionListener() {
 	            @Override
 	            public void actionPerformed(ActionEvent event) {
-	              if (statusbar.isVisible()) {
-	                  statusbar.setVisible(false);
+	              if (statusPanel.isVisible()) {
+	            	  statusPanel.setVisible(false);
 	              } else {
-	                  statusbar.setVisible(true);
+	            	  statusPanel.setVisible(true);
 	              }
 	            }
 	        });
@@ -271,7 +394,7 @@ public class PicnicGIS {
 	        });
 	        mnView.add(mntmcbLayerManager);
 	        
-	        layerPane = new LayerPane(appFrame);
+	        layerPane = new LayerPanel(appFrame);
 	        appFrame.getContentPane().add(layerPane, BorderLayout.EAST);
 	        layerPane.setVisible(true);
 	        layerPane.setLayerMap(layerMap);
@@ -284,12 +407,18 @@ public class PicnicGIS {
 	}
 	
 	private void settingMouseEventToLayerMap() {
-		if (layerMap == null) return;
 		
 		layerMap.addMouseListener(new MouseListener() {
 		    @Override
 		    public void mouseClicked(MouseEvent e) {
-		    	
+		        if (isMouseSelect) {
+		        	int pX = (e.getX() - layerMap.getDrawX()) / layerMap.scale;
+		        	int pY = (e.getY() - layerMap.getDrawY()) / layerMap.scale;
+					layerPane.updateSelection(pX, pY);
+					statusX.setText("X = " + pX);
+					statusY.setText("Y = " + pY);
+					statusText.setText(layerPane.selectedLayer.getDescription(pX, pY));
+		        }
 		    }
 
 			@Override
@@ -306,10 +435,11 @@ public class PicnicGIS {
 
 			@Override
 			public void mousePressed(MouseEvent e) {
-				disX = e.getX() - layerMap.getDrawX();
-		        disY = e.getY() - layerMap.getDrawY();
 		        if (!isMouseSelect) {
-		        	isReadyToMove = true;
+					disX = e.getX() - layerMap.getDrawX();
+			        disY = e.getY() - layerMap.getDrawY();
+
+			        isReadyToMove = true;
 		        	layerMap.setCursor(new Cursor(Cursor.MOVE_CURSOR));
 		        }
 				
@@ -328,10 +458,11 @@ public class PicnicGIS {
 
 			@Override
 			public void mouseDragged(MouseEvent e) {
-				int x = e.getX() - disX;
-		        int y = e.getY() - disY;
+
 		        if (!isMouseSelect) {
 					if (isReadyToMove) {
+						int x = e.getX() - disX;
+				        int y = e.getY() - disY;
 			        	layerMap.setDrawingPoint(x, y);
 			        	layerMap.repaint();
 		        	}
@@ -341,11 +472,63 @@ public class PicnicGIS {
 
 			@Override
 			public void mouseMoved(MouseEvent e) {
-		    	
-		        					
+				
+		        if (isMouseSelect) {
+		        	if (layerPane.selectedLayer != null && layerPane.selectedLayer.isViewOnMap) {
+			        	int pX = (e.getX() - layerMap.getDrawX()) / layerMap.scale;
+			        	int pY = (e.getY() - layerMap.getDrawY()) / layerMap.scale;
+						statusX.setText("X = " + pX);
+						statusY.setText("Y = " + pY);
+						statusText.setText(layerPane.selectedLayer.getDescription(pX, pY));
+		        	}
+		        }
+
 			}
 			
 		});
 	}
 	
+	private void loadLayerManager() {
+		JFileChooser openFile = new JFileChooser();
+		FileFilter filter = new FileNameExtensionFilter("Layer manager file", "lym");
+		openFile.addChoosableFileFilter(filter);
+		openFile.setFileFilter(filter);
+		int ret = openFile.showDialog(appFrame, "Load");
+        if (ret == JFileChooser.APPROVE_OPTION) {
+        	File selectedFile = openFile.getSelectedFile();
+        	layerManager = new LayerManager(selectedFile.getAbsolutePath());
+        	// TODO layerManager.load(layerlist);
+        }
+
+	}
+	
+	private void saveLayerManager() {
+		if (layerManager==null) {
+			saveLayerManagerAs();
+		} else {
+			LayerListModel layerlist = layerPane.getLayerListModel();
+			if (layerlist == null) return;
+			if (layerlist.isEmpty()) return;
+
+			layerManager.save(layerlist);
+		}
+	}
+	
+	private void saveLayerManagerAs() {
+		LayerListModel layerlist = layerPane.getLayerListModel();
+		if (layerlist == null) return;
+		if (layerlist.isEmpty()) return;
+		
+		JFileChooser saveFile = new JFileChooser();
+		FileFilter filter = new FileNameExtensionFilter("Layer manager file", "lym");
+		saveFile.addChoosableFileFilter(filter);
+		saveFile.setFileFilter(filter);
+
+		int ret = saveFile.showDialog(appFrame, "Save");
+        if (ret == JFileChooser.APPROVE_OPTION) {
+        	File selectedFile = saveFile.getSelectedFile();
+        	layerManager = new LayerManager(selectedFile.getAbsolutePath());
+        	layerManager.save(layerlist);
+        }
+	}
 }

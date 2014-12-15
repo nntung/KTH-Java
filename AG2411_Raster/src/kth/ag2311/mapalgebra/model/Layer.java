@@ -1,20 +1,49 @@
 package kth.ag2311.mapalgebra.model;
 
+import java.awt.AlphaComposite;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Graphics2D;
+import java.awt.Rectangle;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.WritableRaster;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Properties;
 import java.util.Random;
 
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JToggleButton;
+import javax.swing.ListSelectionModel;
+
+import kth.ag2311.mapalgebra.view.ElementRenderer;
+import kth.ag2311.mapalgebra.view.LayerType;
 
 /**
  * Storing a raster
@@ -816,7 +845,7 @@ public class Layer {
 	}
 	
 	private boolean isValidPoint(Point p) {
-		if (p.x<0 || p.y<0 || p.x>nCols || p.y>nRows)
+		if (p.x<0 || p.y<0 || p.x>=nCols || p.y>=nRows)
 			return false;
 		else 
 			return true;
@@ -1162,36 +1191,548 @@ public class Layer {
 		return name;
 	}
 	
+	// IMAGE of Layer
+	
 	private final static int defaultAlpha = 250;
 	public BufferedImage imageMap;
 	public void renderMap() {
 		imageMap = new BufferedImage(nCols, nRows, BufferedImage.TYPE_INT_ARGB);
+		
+		// fill all transparent
+		Graphics2D g2d = imageMap.createGraphics();
+		g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,0));
+        g2d.fillRect(0, 0, nCols, nRows);
+
+        // set each point        
 		WritableRaster raster = imageMap.getRaster();
 
 		double grayscale = maxGray ;
 		if (maxValue > minValue)
 			grayscale = maxGray / (maxValue - minValue);
 
+		switch (property.type) {
+		case LayerProperty.TYPE_ROAD:
+			int[] colorBlack = {10,10,10,250};
+			
+			for (int i = 0; i < nRows; i++) { // loop nRows
+				for (int j = 0; j < nCols; j++) { // loop nCols
+					// create color for this point
+					if (values[i][j] != nullValue) {
+						raster.setPixel(j, i, colorBlack);
+					}
+				}
+			}
+			break;
+		case LayerProperty.TYPE_VEGETATION:
+			int[] colors = new int[4];
+			for (int i = 0; i < nRows; i++) { // loop nRows
+				for (int j = 0; j < nCols; j++) { // loop nCols
+					// create color for this point
+					double value = values[i][j];
+					if (value != nullValue) {
+						property.colorAlphas.get(value).getColor(colors);
+						raster.setPixel(j, i, colors);
+					}
+				}
+			}
+			break;
+
+		default:
+			// write data to raster
+			int[] color = new int[4];
+			for (int i = 0; i < nRows; i++) { // loop nRows
+				for (int j = 0; j < nCols; j++) { // loop nCols
+					// create color for this point
+					if (values[i][j] != nullValue) {
+						int value = (int) (values[i][j] * grayscale);
+						color[0] = value; // Alpha
+						color[1] = value; // Red
+						color[2] = value; // Green
+						color[3] = defaultAlpha; // 250
+						raster.setPixel(j, i, color);
+					}
+				}
+			}
+			break;
+		}
+		
+		
+	}
+	
+	// PROPERTY of Layer
+	
+	private final static String FILE_EXTENSION_PROPERTY = ".pro";
+	public LayerProperty property;
+	public void loadProperty() {
+		int pos = path.lastIndexOf(".");
+		String proPath = (pos > 0) ? path.substring(0, pos) : path;
+		proPath = proPath + FILE_EXTENSION_PROPERTY;
+		
+		Properties prop = new Properties();
+		InputStream input = null;
+		property = new LayerProperty(); 
+		try {
+	 
+			input = new FileInputStream(proPath);
+	 
+			// load a properties file
+			prop.load(input);
+			property.setProperty(prop);
+			propertyChange = false;
+	 
+		} catch (IOException ex) {
+			// TODO Show warning message that the layer does not have property file
+			ex.printStackTrace();
+		} finally {
+			createPropertyPanel();
+			if (input != null) {
+				try {
+					input.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
+	}
+
+	public void saveProperty() {
+		int pos = path.lastIndexOf(".");
+		String proPath = (pos > 0) ? path.substring(0, pos) : path;
+		proPath = proPath + FILE_EXTENSION_PROPERTY;
+		
+		Properties prop = new Properties();
+		OutputStream output = null;
+		try {
+	 
+			output = new FileOutputStream(proPath);
+	 
+			// save a properties file
+			property.createProperty(prop);
+			prop.store(output, null);
+
+		} catch (IOException ex) {
+			ex.printStackTrace();
+		} finally {
+			if (output != null) {
+				try {
+					output.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	// RENDER of mask of interest
+	public Layer layerMask;
+	public void createLayerMask() {
+		switch (property.type) {
+		case LayerProperty.TYPE_ROAD:
+			layerMask = getShortestPath(property.startX, property.startY, 
+					property.endX, property.endY);
+			break;
+		case LayerProperty.TYPE_VEGETATION:
+			layerMask = getInterest();
+			break;
+		}
+	}
+	
+	private Layer getInterest() {
+		Layer outLayer = new Layer("interestMask", nRows, nCols, originX,
+				originY, resolution, 0);
+		
+		double value;
+		for (int i = 0; i < nRows; i++) { // loop nRows
+			for (int j = 0; j < nCols; j++) { // loop nCols
+				value = values[i][j];
+				if (property.interests.get(value)) {
+					outLayer.values[i][j] = 1;
+				}
+			}
+		}
+		
+		return outLayer;
+	}
+
+	public BufferedImage imageMask;
+	public void renderMaskOfInterest() {
+		// create buffer
+		imageMask = new BufferedImage(nCols, nRows, BufferedImage.TYPE_INT_ARGB);
+		// fill all transparent
+		Graphics2D g2d = imageMask.createGraphics();
+		g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER,0));
+        g2d.fillRect(0, 0, nCols, nRows);
+		// do not update if null
+		if (layerMask == null) return;
+		
+		switch (property.type) {
+		case LayerProperty.TYPE_ROAD:
+			createRoadMask();
+			break;
+		case LayerProperty.TYPE_VEGETATION:
+			createInterestMask();
+			break;
+		}
+	}
+	
+	private void createInterestMask() {
+		WritableRaster raster = imageMask.getRaster();
+		
 		// write data to raster
-		int[] color = new int[4];
+		int[] color1 = {0,0,250,250};
+		
 		for (int i = 0; i < nRows; i++) { // loop nRows
 			for (int j = 0; j < nCols; j++) { // loop nCols
 				// create color for this point
-				if (values[i][j] == nullValue) {
-					color[0] = nullGray[0]; // Alpha
-					color[1] = nullGray[1]; // Red
-					color[2] = nullGray[2]; // Green
-					color[3] = 0; // Blue
-				} else {
-					int value = (int) (values[i][j] * grayscale);
-					color[0] = value; // Alpha
-					color[1] = value; // Red
-					color[2] = value; // Green
-					color[3] = defaultAlpha; // 250
-				}
-				raster.setPixel(j, i, color);
+				if (layerMask.values[i][j] > 0) {
+					raster.setPixel(j, i, color1);
+				} 
 			}
 		}
+		
+	}
+
+	private void createRoadMask() {
+		WritableRaster raster = imageMask.getRaster();
+		
+		// write data to raster
+		int[] color1 = {250,0,0,200};
+		
+		for (int i = 0; i < nRows; i++) { // loop nRows
+			for (int j = 0; j < nCols; j++) { // loop nCols
+				// create color for this point
+				if (layerMask.values[i][j] > 0) {
+					raster.setPixel(j, i, color1);
+				} 
+			}
+		}
+	}
+	
+	public JPanel propertyPanel;
+	private void createPropertyPanel() {
+		switch (property.type) {
+		case LayerProperty.TYPE_ROAD:
+			createRoadPropertyPanel();
+			break;
+		case LayerProperty.TYPE_VEGETATION:
+			createVegetationPropertyPanel();
+			break;
+		default:
+			propertyPanel = new JPanel();
+		}
+	}
+	
+	// General Property Panel
+	private boolean propertyChange;
+	private LayerType layerType;
+	JCheckBox cbShowMask;
+	
+	// ROAD Property Panel
+	JToggleButton btnStart;
+	JToggleButton btnEnd;
+	JCheckBox cbAddToShortestPath;
+	
+	private void createRoadPropertyPanel() {
+		propertyPanel = new JPanel();
+		propertyPanel.setLayout(new BorderLayout());
+		
+		layerType = new LayerType();
+		propertyPanel.add(layerType, BorderLayout.NORTH);
+		layerType.setType(LayerProperty.TYPE_ROAD);
+		
+		JPanel panel = new JPanel();
+		propertyPanel.add(panel, BorderLayout.CENTER);
+		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+		
+		btnStart = new JToggleButton("Start point");
+		btnStart.setAlignmentX(Component.CENTER_ALIGNMENT);
+		panel.add(btnStart);
+		
+		panel.add(Box.createRigidArea(new Dimension(0,5)));
+		
+		btnEnd = new JToggleButton("End point");
+		btnEnd.setAlignmentX(Component.CENTER_ALIGNMENT);
+		panel.add(btnEnd);
+		
+		btnStart.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			if (btnStart.isSelected()) {
+    				btnEnd.setSelected(false);
+    			}
+    		}
+    	});
+		
+		btnEnd.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			if (btnEnd.isSelected()) {
+    				btnStart.setSelected(false);
+    			}
+    		}
+    	});
+		
+		JPanel control = new JPanel();
+		propertyPanel.add(control, BorderLayout.SOUTH);
+		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
+
+		cbAddToShortestPath = new JCheckBox("Add to Shortest Path");
+		control.add(cbAddToShortestPath);
+		cbAddToShortestPath.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				if (cbAddToShortestPath.isSelected()) {
+					setThisLayerToShortestPathLayer();
+				} else {
+					removeThisLayerFromShortestPathLayer();
+				}
+			}
+		});
+		cbAddToShortestPath.setSelected(true);
+		
+		cbShowMask = new JCheckBox("Show mask");
+		control.add(cbShowMask);
+		cbShowMask.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				setMask();
+			}
+		});
+		cbShowMask.setSelected(true);
+
+		JButton btnSaveChanges = new JButton("Save changes");
+		control.add(btnSaveChanges);
+		btnSaveChanges.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			saveProperty();
+    		}
+    	});
+			
+		updateRoadPropertyPanel();
+	}
+	
+	private void setThisLayerToShortestPathLayer() {
+		GeneralLayers.shortestPath = this;
+		GeneralLayers.generalLayer.renderImageMap();
+		GeneralLayers.generalLayer.repaint();
+	}
+	private void removeThisLayerFromShortestPathLayer() {
+		GeneralLayers.shortestPath = null;
+		GeneralLayers.generalLayer.renderImageMap();
+		GeneralLayers.generalLayer.repaint();
+	}
+	
+	public void setImageMask() {
+		GeneralLayers.maskLayer = this;
+		GeneralLayers.generalLayer.renderImageMap();
+		GeneralLayers.generalLayer.repaint();
+	}
+	public void removeImageMask() {
+		GeneralLayers.maskLayer = null;
+		GeneralLayers.generalLayer.renderImageMap();
+		GeneralLayers.generalLayer.repaint();
+	}
+	public void setMask() {
+		if (cbShowMask.isSelected()) {
+			setImageMask();
+		} else {
+			removeImageMask();
+		}
+	}
+	
+	private void updateRoadPropertyPanel() {
+		String sX = (property.startX >0) ? Integer.toString(property.startX) : "?";
+		String sY = (property.startY >0) ? Integer.toString(property.startY) : "?";
+		btnStart.setText("Start point (X="+ sX + ", Y=" + sY + ")");
+		sX = (property.endX >0) ? Integer.toString(property.endX) : "?";
+		sY = (property.endY >0) ? Integer.toString(property.endY) : "?";
+		btnEnd.setText("End point (X="+ sX + ", Y=" + sY + ")");
+	}
+	
+	private boolean updateRoadSelection(int xx, int yy) {
+		if (btnStart.isSelected()) {
+			propertyChange = true;
+			property.startX = xx;
+			property.startY = yy;
+			updateRoadPropertyPanel();
+			layerMask = getShortestPath(property.startX, property.startY, 
+					property.endX, property.endY);
+			renderMaskOfInterest();
+			return true;
+		}
+		if (btnEnd.isSelected()) {
+			propertyChange = true;
+			property.endX = xx;
+			property.endY = yy;
+			updateRoadPropertyPanel();
+			layerMask = getShortestPath(property.startX, property.startY, 
+					property.endX, property.endY);
+			renderMaskOfInterest();
+			return true;
+		}
+		return false;
+	}
+
+	public boolean updateSelection(int xx, int yy) {
+		boolean isUpdate = false;
+		switch (property.type) {
+		case LayerProperty.TYPE_ROAD:
+			isUpdate = updateRoadSelection(xx,yy);
+			break;
+		case LayerProperty.TYPE_VEGETATION:
+			//TODO isUpdate = updateVegetationSelection(xx,yy);
+			break;
+		}
+		return isUpdate;
+	}
+	
+	private JList<Element> listElement;
+	private ElementListModel elementListModel;
+	private JToggleButton btnSetInterest;
+	private JCheckBox cbAddToPicnicMap;
+	private void createVegetationPropertyPanel() {
+		propertyPanel = new JPanel();
+		propertyPanel.setLayout(new BorderLayout());
+		
+		layerType = new LayerType();
+		propertyPanel.add(layerType, BorderLayout.NORTH);
+		layerType.setType(LayerProperty.TYPE_VEGETATION);
+		
+		JPanel panel = new JPanel();
+		propertyPanel.add(panel, BorderLayout.CENTER);
+		BoxLayout boxLayoutLayers = new BoxLayout(panel, BoxLayout.PAGE_AXIS);
+		panel.setLayout(boxLayoutLayers);
+		
+		listElement = new JList<Element>();
+		listElement.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		listElement.setLayoutOrientation(JList.VERTICAL);
+		listElement.setVisibleRowCount(-1);
+		listElement.setCellRenderer(new ElementRenderer());
+		listElement.addMouseListener(new MouseAdapter() {
+			
+			public void mouseReleased(MouseEvent e) {				
+				int index = listElement.locationToIndex(e.getPoint());
+				Element elementItem = listElement.getModel().getElementAt(index);
+				int cursorX = e.getPoint().x;
+				if (cursorX < Element.iconwidth) {
+					// show color chooser
+					Rectangle rect = listElement.getCellBounds(index, index);
+					listElement.repaint(rect);
+					
+					// TODO update layerMap
+					//GeneralLayers.generalLayer.renderImageMap();
+					//GeneralLayers.generalLayer.repaint();
+				}
+				
+				if (btnSetInterest.isSelected()) {
+					elementItem.interest = !elementItem.interest; 
+					Rectangle rect = listElement.getCellBounds(index, index);
+					listElement.repaint(rect);
+					
+					// update property
+					property.interests.put(elementItem.value, elementItem.interest);
+					layerMask = getInterest();
+					renderMaskOfInterest();
+					GeneralLayers.generalLayer.renderImageMap();
+					GeneralLayers.generalLayer.repaint();
+				}
+				
+			}
+		});
+		
+		elementListModel = new ElementListModel();
+		listElement.setModel(elementListModel);
+		
+		JScrollPane listScroller = new JScrollPane(listElement);
+		panel.add(listScroller);
+		
+		JPanel control = new JPanel();
+		propertyPanel.add(control, BorderLayout.SOUTH);
+		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
+
+		btnSetInterest = new JToggleButton("Set Interests");
+		control.add(btnSetInterest);
+		btnSetInterest.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			// TODO ...
+    		}
+    	});
+		
+		cbAddToPicnicMap = new JCheckBox("Add to Picnic Map");
+		control.add(cbAddToPicnicMap);
+		cbAddToPicnicMap.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				updatePicnicMap();
+			}
+		});
+		cbAddToPicnicMap.setSelected(true);
+		
+		cbShowMask = new JCheckBox("Show mask");
+		control.add(cbShowMask);
+		cbShowMask.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				if (cbShowMask.isSelected()) {
+					setImageMask();
+				} else {
+					removeImageMask();
+				}
+			}
+		});
+		cbShowMask.setSelected(true);
+
+		JButton btnSaveChanges = new JButton("Save changes");
+		control.add(btnSaveChanges);
+		btnSaveChanges.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			saveProperty();
+    		}
+    	});
+		
+		createElementListModel();	
+		//updateVegetationPropertyPanel();
+	}
+	
+	protected void updatePicnicMap() {
+		// TODO Auto-generated method stub
+		
+	}
+
+
+	private void createElementListModel() {
+		for (Double value : property.descriptions.keySet()) {
+			String des = property.descriptions.get(value);
+			String color = property.colors.get(value);
+			Boolean interest = property.interests.get(value);
+			Element element = new Element(value, des, color, interest);
+			elementListModel.addElement(element);
+		}
+	}
+	
+	private void updateVegetationPropertyPanel() {
+		// TODO updateElementListModel
+
+		
+	}
+	
+	public String getDescription(int xx, int yy) {
+		String des = "";
+		
+		if (!isValidPoint(new Point(xx, yy))) return des;
+		
+		double value = values[yy][xx];
+		switch (property.type) {
+		case LayerProperty.TYPE_ROAD:
+			if (value>0)
+				des = "Road";
+			else 
+				des = "Blank";
+			break;
+		case LayerProperty.TYPE_VEGETATION:
+			des = property.descriptions.get(value);
+			break;
+
+		default:
+			break;
+		}
+		
+		return des;
 	}
 
 }

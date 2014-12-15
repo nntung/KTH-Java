@@ -5,10 +5,11 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JPanel;
 
+import kth.ag2311.mapalgebra.model.GeneralLayers;
 import kth.ag2311.mapalgebra.model.Layer;
 import kth.ag2311.mapalgebra.model.LayerListModel;
 
@@ -18,6 +19,8 @@ public class LayerMap extends JPanel {
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private static ImageIcon startIcon = new ImageIcon(ClassLoader.getSystemResource("images/start_point.png"));
+	private static ImageIcon endIcon = new ImageIcon(ClassLoader.getSystemResource("images/end_point.png"));
 
 	/**
 	 * Create the panel.
@@ -26,7 +29,9 @@ public class LayerMap extends JPanel {
 	private BufferedImage scaleMap;
 	private LayerListModel layerListModel;
 	private int drawX, drawY;
-	private int scale;
+	public int scale;
+	
+	public boolean showPath;
 	
 	public void setLayerListModel(LayerListModel layersModel) {
 		this.layerListModel = layersModel;
@@ -82,8 +87,23 @@ public class LayerMap extends JPanel {
 			idx--;
 		}
 		
+		if (GeneralLayers.maskLayer != null) {
+			if (GeneralLayers.maskLayer.isViewOnMap)
+				gbi.drawImage(GeneralLayers.maskLayer.imageMask, 0, 0, null);
+		}
+
+		// view add last
+		if (showPath) {
+			if (GeneralLayers.shortestPath != null) {
+				if (GeneralLayers.shortestPath.imageMask != null) {
+					gbi.drawImage(GeneralLayers.shortestPath.imageMask, 0, 0, null);
+				}
+			}
+		}
+		
 		if (scale>1)
 			scaleImageMap();
+		
 	}
 	
 	public void scaleImageMap() {
@@ -108,11 +128,7 @@ public class LayerMap extends JPanel {
 		drawX = 0;
 		drawY = 0;
 		scale = 1;
-		init(parent);
-	}
-	
-	private void init(JFrame parent) {
-		//statusbar =  parent.getStatusBar();
+		
 	}
 	
     private void doDrawing(Graphics g) {
@@ -124,10 +140,15 @@ public class LayerMap extends JPanel {
         	if (scale>1)
         		g2d.drawImage(scaleMap, drawX, drawY, null);        	
         	else 	
-        		g2d.drawImage(imageMap, drawX, drawY, null);        	
+        		g2d.drawImage(imageMap, drawX, drawY, null); 
+        	
+    		// show Start/End Point on top and show at last
+    		if (showPath) {
+    			drawShortestPath(g2d);
+    		}
 
         } else {
-        	g2d.drawString("Add layer into Layer List", 50, 50);
+        	//g2d.drawString("Add layer into Layer List", 50, 50);
         }
     }
 
@@ -136,6 +157,30 @@ public class LayerMap extends JPanel {
 
         super.paintComponent(g);
         doDrawing(g);
+    }
+    
+    private void drawShortestPath(Graphics2D g2d) {
+		if (GeneralLayers.shortestPath == null) return;
+    	// two points
+    	int startX = GeneralLayers.shortestPath.property.startX;
+    	int startY = GeneralLayers.shortestPath.property.startY;
+    	
+    	if (startX>0 && startY>0 
+    			&& startX<GeneralLayers.shortestPath.nCols 
+    			&& startY<GeneralLayers.shortestPath.nRows) {
+			int pX= (startX * scale - startIcon.getIconWidth()/2)  + drawX;
+			int pY= (startY * scale - startIcon.getIconHeight())  + drawY;
+    		g2d.drawImage(startIcon.getImage(), pX, pY, null);        	
+		}
+    	int endX = GeneralLayers.shortestPath.property.endX;
+    	int endY = GeneralLayers.shortestPath.property.endY;
+    	if (endX>0 && endY>0 
+    			&& endX<GeneralLayers.shortestPath.nCols 
+    			&& endY<GeneralLayers.shortestPath.nRows) {
+			int pX= (endX * scale - startIcon.getIconWidth()/2)  + drawX;
+			int pY= (endY * scale - startIcon.getIconHeight())  + drawY;
+    		g2d.drawImage(endIcon.getImage(), pX, pY, null);        	
+		}    	
     }
 
 }
