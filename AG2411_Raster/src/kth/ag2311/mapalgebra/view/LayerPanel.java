@@ -266,7 +266,7 @@ public class LayerPanel extends JPanel {
     	if (layer.isImportSucessful) {
     		layer.name = layer.name + " (" + layer.nCols + "x" + layer.nRows + ")";
     		layer.isViewOnMap = true;
-    		layer.loadProperty();
+    		layer.loadProperty(); // and create PropertyPane as well
     		layer.renderMap();
     		layer.createLayerMask();
     		layer.renderMaskOfInterest();

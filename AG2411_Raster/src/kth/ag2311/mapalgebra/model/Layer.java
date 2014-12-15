@@ -42,6 +42,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JToggleButton;
 import javax.swing.ListSelectionModel;
 
+import kth.ag2311.mapalgebra.view.DistancePanel;
 import kth.ag2311.mapalgebra.view.ElementRenderer;
 import kth.ag2311.mapalgebra.view.LayerType;
 
@@ -1224,6 +1225,8 @@ public class Layer {
 			}
 			break;
 		case LayerProperty.TYPE_VEGETATION:
+		case LayerProperty.TYPE_DEVELOPMENT:
+		case LayerProperty.TYPE_HYDROLOGY:
 			int[] colors = new int[4];
 			for (int i = 0; i < nRows; i++) { // loop nRows
 				for (int j = 0; j < nCols; j++) { // loop nCols
@@ -1417,6 +1420,12 @@ public class Layer {
 			break;
 		case LayerProperty.TYPE_VEGETATION:
 			createVegetationPropertyPanel();
+			break;
+		case LayerProperty.TYPE_DEVELOPMENT:
+			createDevOrHydroPropertyPanel(true);
+			break;
+		case LayerProperty.TYPE_HYDROLOGY:
+			createDevOrHydroPropertyPanel(false);
 			break;
 		default:
 			propertyPanel = new JPanel();
@@ -1675,6 +1684,122 @@ public class Layer {
 				}
 			}
 		});
+		cbShowMask.setSelected(false);
+
+		JButton btnSaveChanges = new JButton("Save changes");
+		control.add(btnSaveChanges);
+		btnSaveChanges.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			saveProperty();
+    		}
+    	});
+		
+		createElementListModel();	
+		//updateVegetationPropertyPanel();
+	}
+	
+	private DistancePanel distancePanel;
+	private void createDevOrHydroPropertyPanel(boolean isDev) {
+		propertyPanel = new JPanel();
+		propertyPanel.setLayout(new BorderLayout());
+		
+		layerType = new LayerType();
+		propertyPanel.add(layerType, BorderLayout.NORTH);
+		if (isDev)
+			layerType.setType(LayerProperty.TYPE_DEVELOPMENT);
+		else 
+			layerType.setType(LayerProperty.TYPE_HYDROLOGY);
+			
+		
+		JPanel panel = new JPanel();
+		propertyPanel.add(panel, BorderLayout.CENTER);
+		BoxLayout boxLayoutLayers = new BoxLayout(panel, BoxLayout.PAGE_AXIS);
+		panel.setLayout(boxLayoutLayers);
+		
+		listElement = new JList<Element>();
+		listElement.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		listElement.setLayoutOrientation(JList.VERTICAL);
+		listElement.setVisibleRowCount(-1);
+		listElement.setCellRenderer(new ElementRenderer());
+		listElement.addMouseListener(new MouseAdapter() {
+			
+			public void mouseReleased(MouseEvent e) {				
+				int index = listElement.locationToIndex(e.getPoint());
+				Element elementItem = listElement.getModel().getElementAt(index);
+				int cursorX = e.getPoint().x;
+				if (cursorX < Element.iconwidth) {
+					// show color chooser
+					Rectangle rect = listElement.getCellBounds(index, index);
+					listElement.repaint(rect);
+					
+					// TODO update layerMap
+					//GeneralLayers.generalLayer.renderImageMap();
+					//GeneralLayers.generalLayer.repaint();
+				}
+				
+				if (btnSetInterest.isSelected()) {
+					elementItem.interest = !elementItem.interest; 
+					Rectangle rect = listElement.getCellBounds(index, index);
+					listElement.repaint(rect);
+					
+					// update property
+					property.interests.put(elementItem.value, elementItem.interest);
+					layerMask = getInterest();
+					renderMaskOfInterest();
+					GeneralLayers.generalLayer.renderImageMap();
+					GeneralLayers.generalLayer.repaint();
+				}
+				
+			}
+		});
+		
+		elementListModel = new ElementListModel();
+		listElement.setModel(elementListModel);
+		
+		JScrollPane listScroller = new JScrollPane(listElement);
+		panel.add(listScroller);
+		
+		JPanel control = new JPanel();
+		propertyPanel.add(control, BorderLayout.SOUTH);
+		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
+
+		String btnName = "";
+		if (isDev) btnName = "Set Interests and Away Distance";
+		else btnName = "Set Interests and Close Distance";
+		
+		btnSetInterest = new JToggleButton(btnName);
+		btnSetInterest.setToolTipText(btnName);
+		control.add(btnSetInterest);
+		btnSetInterest.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			// TODO ...
+    		}
+    	});
+
+		if (isDev) distancePanel = new DistancePanel(property.awayFrom);
+		else distancePanel = new DistancePanel(property.closeBy);
+		control.add(distancePanel);
+		
+		cbAddToPicnicMap = new JCheckBox("Add to Picnic Map");
+		control.add(cbAddToPicnicMap);
+		cbAddToPicnicMap.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				updatePicnicMap();
+			}
+		});
+		cbAddToPicnicMap.setSelected(false);
+		
+		cbShowMask = new JCheckBox("Show mask");
+		control.add(cbShowMask);
+		cbShowMask.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				if (cbShowMask.isSelected()) {
+					setImageMask();
+				} else {
+					removeImageMask();
+				}
+			}
+		});
 		cbShowMask.setSelected(true);
 
 		JButton btnSaveChanges = new JButton("Save changes");
@@ -1707,7 +1832,6 @@ public class Layer {
 	
 	private void updateVegetationPropertyPanel() {
 		// TODO updateElementListModel
-
 		
 	}
 	
@@ -1725,6 +1849,8 @@ public class Layer {
 				des = "Blank";
 			break;
 		case LayerProperty.TYPE_VEGETATION:
+		case LayerProperty.TYPE_DEVELOPMENT:
+		case LayerProperty.TYPE_HYDROLOGY:
 			des = property.descriptions.get(value);
 			break;
 

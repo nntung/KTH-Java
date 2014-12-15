@@ -27,6 +27,8 @@ public class LayerProperty {
 	public HashMap<Double, String> colors;
 	public HashMap<Double, Boolean> interests;
 	public HashMap<Double, ColorAlpha> colorAlphas;
+	public int awayFrom;
+	public int closeBy;
 	// type Elevation
 	
 	
@@ -53,10 +55,10 @@ public class LayerProperty {
 			parseTypeRoad(prop);
 			break;
 		case TYPE_DEVELOPMENT:
-
+			parseTypeDevelopment(prop);
 			break;
 		case TYPE_HYDROLOGY:
-
+			parseTypeHydrology(prop);
 			break;
 		case TYPE_VEGETATION:
 			parseTypeVegetation(prop);
@@ -68,6 +70,24 @@ public class LayerProperty {
 			break;
 		}
 
+	}
+
+	private void parseTypeHydrology(Properties prop) {
+		parseTypeVegetation(prop);
+		try {
+			closeBy = Integer.parseInt(prop.getProperty("close"));
+		} catch (NumberFormatException e) {
+			closeBy = 3;
+		}
+	}
+
+	private void parseTypeDevelopment(Properties prop) {
+		parseTypeVegetation(prop);
+		try {
+			awayFrom = Integer.parseInt(prop.getProperty("away"));
+		} catch (NumberFormatException e) {
+			awayFrom = 3;
+		}
 	}
 
 	private void parseTypeVegetation(Properties prop) {
@@ -153,11 +173,11 @@ public class LayerProperty {
 			break;
 		case TYPE_DEVELOPMENT:
 			prop.setProperty("type", ST_DEVELOPMENT);
-			
+			createTypeDevelopment(prop);
 			break;
 		case TYPE_HYDROLOGY:
 			prop.setProperty("type", ST_HYDROLOGY);
-
+			createTypeHydrology(prop);
 			break;
 		case TYPE_VEGETATION:
 			prop.setProperty("type", ST_VEGETATION);
@@ -171,6 +191,16 @@ public class LayerProperty {
 			break;
 		}
 		
+	}
+
+	private void createTypeHydrology(Properties prop) {
+		createTypeVegetation(prop);
+		prop.setProperty("close", Integer.toString(closeBy));
+	}
+
+	private void createTypeDevelopment(Properties prop) {
+		createTypeVegetation(prop);
+		prop.setProperty("away", Integer.toString(awayFrom));
 	}
 
 	private void createTypeVegetation(Properties prop) {
