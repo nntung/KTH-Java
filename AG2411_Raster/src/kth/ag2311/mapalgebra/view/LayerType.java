@@ -38,6 +38,12 @@ public class LayerType extends JPanel {
 		case LayerProperty.TYPE_ELEVATION:
 			lType.setText("ELEVATION");
 			break;
+		case LayerProperty.TYPE_SLOPE:
+			lType.setText("SLOPE");
+			break;
+		case LayerProperty.TYPE_ASPECT:
+			lType.setText("ASPECT");
+			break;
 		case LayerProperty.TYPE_UNDEFINED:
 			lType.setText("UNDEFINED");
 			break;

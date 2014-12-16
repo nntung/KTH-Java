@@ -41,8 +41,6 @@ import java.awt.event.MouseMotionListener;
 import kth.ag2311.mapalgebra.model.GeneralLayers;
 import kth.ag2311.mapalgebra.model.LayerListModel;
 import kth.ag2311.mapalgebra.model.LayerManager;
-import kth.ag2311.mapalgebra.model.LayerProperty;
-import kth.ag2311.mapalgebra.model.Point;
 
 public class PicnicGIS {
 
@@ -226,20 +224,7 @@ public class PicnicGIS {
 	        ImageIcon iconPicnicMap = new ImageIcon(urlPinicMap);
 		    URL urlShortestPath = ClassLoader.getSystemResource("images/shortest.png");
 	        ImageIcon iconShortestPath = new ImageIcon(urlShortestPath);
-	        URL urlCompass = ClassLoader.getSystemResource("images/compass.png");
-	        ImageIcon iconCompass = new ImageIcon(urlCompass);
-			
-	        {
-				JToggleButton btnAspect = new JToggleButton();
-				btnAspect.setIcon(iconCompass);
-				btnAspect.setToolTipText("Show aspect map");
-				toolBar.add(btnAspect);
-				btnAspect.addActionListener(new ActionListener() {
-		    		public void actionPerformed(ActionEvent e) {
-		    			//TODO Show Picnic map
-		    		}
-		    	});
-			}
+	        
 	        {
 				JToggleButton btnPicnicMap = new JToggleButton();
 				btnPicnicMap.setIcon(iconPicnicMap);
@@ -332,6 +317,15 @@ public class PicnicGIS {
 	    	
 	    	JMenu mnHelp = new JMenu("Help");
 	    	menuBar.add(mnHelp);
+	    	
+	    	JMenuItem mntmAbout = new JMenuItem("About");
+	    	mntmAbout.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F1, InputEvent.CTRL_MASK));
+	    	mntmAbout.addActionListener(new ActionListener() {
+	    		public void actionPerformed(ActionEvent e) {
+	    			//TODO about dialog
+	    		}
+	    	});
+	    	mnHelp.add(mntmAbout);
 	    	
 	    	statusPanel = new JPanel();
 	    	appFrame.getContentPane().add(statusPanel, BorderLayout.SOUTH);

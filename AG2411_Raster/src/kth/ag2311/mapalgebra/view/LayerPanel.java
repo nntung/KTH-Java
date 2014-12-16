@@ -276,6 +276,8 @@ public class LayerPanel extends JPanel {
     		//add to property panel cards
     		propertyPanel.add(layer.propertyPanel, layer.name);
     		
+    		// TODO add SLOPE and ASPECT if layer type is ELEVATION
+    		
     		GeneralLayers.generalLayer.renderImageMap();
     		GeneralLayers.generalLayer.repaint();
     		

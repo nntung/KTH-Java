@@ -10,6 +10,8 @@ public class LayerProperty {
 	public final static int TYPE_VEGETATION = 3;
 	public final static int TYPE_HYDROLOGY = 4;
 	public final static int TYPE_ELEVATION = 5;
+	public final static int TYPE_SLOPE = 6;
+	public final static int TYPE_ASPECT = 7;
 	
 	public final static String ST_UNDEFINED = "?";
 	public final static String ST_ROAD = "road";
@@ -64,7 +66,9 @@ public class LayerProperty {
 			parseTypeVegetation(prop);
 			break;
 		case TYPE_ELEVATION:
-
+		case TYPE_SLOPE:
+		case TYPE_ASPECT:
+			parseElevationVegetation(prop);
 			break;
 		default:
 			break;
@@ -72,8 +76,52 @@ public class LayerProperty {
 
 	}
 
+	private void parseElevationVegetation(Properties prop) {
+		// TODO Auto-generated method stub
+		
+	}
+
 	private void parseTypeHydrology(Properties prop) {
-		parseTypeVegetation(prop);
+		// get num of elements
+		int num;
+		try {
+			num = Integer.parseInt(prop.getProperty("number"));
+		} catch (NumberFormatException e) {
+			num = -1;
+		}
+
+		// init HashMap
+		descriptions = new HashMap<Double, String>();
+		colors = new HashMap<Double, String>();
+		interests = new HashMap<Double, Boolean>();
+		colorAlphas = new HashMap<Double, ColorAlpha>();
+
+		// start to parse
+		Double value;
+		String des;
+		String color;
+		String key;
+		for (int i = 0; i < num; i++) {
+			// get value
+			key = "value" + i;
+			try {
+				value = Double.parseDouble(prop.getProperty(key));
+			} catch (NumberFormatException e) {
+				value = new Double(-1);
+			}
+			// get Description
+			key = "des" + i;
+			des = prop.getProperty(key);
+			descriptions.put(value, des);
+			// get Color
+			key = "RGBA" + i;
+			color = prop.getProperty(key);
+			colors.put(value, color);
+
+			colorAlphas.put(value, new ColorAlpha(color));
+			interests.put(value, false);
+		}
+		
 		try {
 			closeBy = Integer.parseInt(prop.getProperty("close"));
 		} catch (NumberFormatException e) {
@@ -82,7 +130,46 @@ public class LayerProperty {
 	}
 
 	private void parseTypeDevelopment(Properties prop) {
-		parseTypeVegetation(prop);
+		// get num of elements
+		int num;
+		try {
+			num = Integer.parseInt(prop.getProperty("number"));
+		} catch (NumberFormatException e) {
+			num = -1;
+		}
+
+		// init HashMap
+		descriptions = new HashMap<Double, String>();
+		colors = new HashMap<Double, String>();
+		interests = new HashMap<Double, Boolean>();
+		colorAlphas = new HashMap<Double, ColorAlpha>();
+
+		// start to parse
+		Double value;
+		String des;
+		String color;
+		String key;
+		for (int i = 0; i < num; i++) {
+			// get value
+			key = "value" + i;
+			try {
+				value = Double.parseDouble(prop.getProperty(key));
+			} catch (NumberFormatException e) {
+				value = new Double(-1);
+			}
+			// get Description
+			key = "des" + i;
+			des = prop.getProperty(key);
+			descriptions.put(value, des);
+			// get Color
+			key = "RGBA" + i;
+			color = prop.getProperty(key);
+			colors.put(value, color);
+
+			colorAlphas.put(value, new ColorAlpha(color));
+			interests.put(value, false);
+		}
+				
 		try {
 			awayFrom = Integer.parseInt(prop.getProperty("away"));
 		} catch (NumberFormatException e) {
@@ -184,12 +271,19 @@ public class LayerProperty {
 			createTypeVegetation(prop);
 			break;
 		case TYPE_ELEVATION:
+		case TYPE_SLOPE:
+		case TYPE_ASPECT:
 			prop.setProperty("type", ST_ELEVATION);
-
+			createTypeElevation(prop);
 			break;
 		default:
 			break;
 		}
+		
+	}
+
+	private void createTypeElevation(Properties prop) {
+		// TODO Auto-generated method stub
 		
 	}
 

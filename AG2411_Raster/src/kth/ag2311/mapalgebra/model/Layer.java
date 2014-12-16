@@ -39,10 +39,10 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.ListSelectionModel;
 
-import kth.ag2311.mapalgebra.view.DistancePanel;
 import kth.ag2311.mapalgebra.view.ElementRenderer;
 import kth.ag2311.mapalgebra.view.LayerType;
 
@@ -623,7 +623,7 @@ public class Layer {
 	 * @param square
 	 *            TRUE=square, FALSE=circle
 	 */
-	private void createMask(boolean square) {
+	private void createFocal(boolean square) {
 		int size = Radius * 2 + 1;
 		this.mask = new int[size][size];
 		if (square) {
@@ -729,7 +729,7 @@ public class Layer {
 		// IMPORTANT! Need to create Delta and Mask
 		Radius = radius;
 		createDelta();
-		createMask(square);
+		createFocal(square);
 
 		for (int i = 0; i < nRows; i++) { // loop nRows
 			for (int j = 0; j < nCols; j++) { // loop nCols
@@ -1207,10 +1207,6 @@ public class Layer {
         // set each point        
 		WritableRaster raster = imageMap.getRaster();
 
-		double grayscale = maxGray ;
-		if (maxValue > minValue)
-			grayscale = maxGray / (maxValue - minValue);
-
 		switch (property.type) {
 		case LayerProperty.TYPE_ROAD:
 			int[] colorBlack = {10,10,10,250};
@@ -1241,13 +1237,17 @@ public class Layer {
 			break;
 
 		default:
+			double grayscale = maxGray ;
+			if (maxValue > minValue)
+				grayscale = maxGray / (maxValue - minValue);
+			
 			// write data to raster
 			int[] color = new int[4];
 			for (int i = 0; i < nRows; i++) { // loop nRows
 				for (int j = 0; j < nCols; j++) { // loop nCols
 					// create color for this point
 					if (values[i][j] != nullValue) {
-						int value = (int) (values[i][j] * grayscale);
+						int value = (int) ((values[i][j] - minValue) * grayscale);
 						color[0] = value; // Alpha
 						color[1] = value; // Red
 						color[2] = value; // Green
@@ -1338,7 +1338,90 @@ public class Layer {
 		case LayerProperty.TYPE_VEGETATION:
 			layerMask = getInterest();
 			break;
+		case LayerProperty.TYPE_DEVELOPMENT:
+			layerMask = getInterestWithDistance(false, property.awayFrom);
+			break;
+		case LayerProperty.TYPE_HYDROLOGY:
+			layerMask = getInterestWithDistance(true, property.closeBy);
+			break;
+		case LayerProperty.TYPE_ELEVATION:
+			layerMask = null;
+			break;
+
 		}
+	}
+	
+	private Layer getInterestWithDistance(boolean isCloseBy, int dis) {
+		Layer outLayer = new Layer("interestMask", nRows, nCols, originX,
+				originY, resolution, 0);
+
+		// IMPORTANT! Need to create Delta and Mask
+		Radius = dis;
+		createDelta();
+		createFocal(false);
+
+		for (int i = 0; i < nRows; i++) { // loop nRows
+			for (int j = 0; j < nCols; j++) { // loop nCols
+
+				if (values[i][j]>0) { // TODO TODO TODO
+					// get list of neighbors
+					ArrayList<Point> neighbors = getNeighborhoodPoint(i, j);
+
+					// get number of neighbors, if it is empty then continue
+					int numOfNeighbors = 0;
+					if (neighbors.isEmpty()) {
+						continue;
+					} else {
+						numOfNeighbors = neighbors.size();
+					}
+					
+					for (int k = 0; k < numOfNeighbors; k++) {
+						Point p = neighbors.get(k);
+						outLayer.values[p.y][p.x] = 1;
+					}
+				}
+			}
+		}
+
+		if (!isCloseBy) {
+			for (int i = 0; i < nRows; i++) { // loop nRows
+				for (int j = 0; j < nCols; j++) { // loop nCols
+					if (values[i][j] > 0) {
+						outLayer.values[i][j] = 0;
+					} else {
+						outLayer.values[i][j] = (outLayer.values[i][j] > 0) ? 0 : 1;
+					}
+				}
+			}
+		} else {
+			for (int i = 0; i < nRows; i++) { // loop nRows
+				for (int j = 0; j < nCols; j++) { // loop nCols
+					if (values[i][j] > 0) {
+						outLayer.values[i][j] = 0;
+					}
+				}
+			}
+		}
+		
+		return outLayer;
+	}
+	
+	private ArrayList<Point> getNeighborhoodPoint(int rIdx, int cIdx) {
+		ArrayList<Point> neighbors = new ArrayList<Point>();
+		int size = Radius * 2 + 1;
+		for (int i = 0; i < size; i++) {
+			for (int j = 0; j < size; j++) {
+				if (this.mask[i][j] == 1) {
+					// get real row and col after apply mask and delta
+					int row = rIdx + dRow[i][j];
+					int col = cIdx + dCol[i][j];
+					if (row >= 0 && row < nRows && col >= 0 && col < nCols)
+						neighbors.add(new Point(col,row));
+				}
+			}
+		}
+
+		return neighbors;
 	}
 	
 	private Layer getInterest() {
@@ -1374,6 +1457,8 @@ public class Layer {
 			createRoadMask();
 			break;
 		case LayerProperty.TYPE_VEGETATION:
+		case LayerProperty.TYPE_DEVELOPMENT:
+		case LayerProperty.TYPE_HYDROLOGY:
 			createInterestMask();
 			break;
 		}
@@ -1426,6 +1511,15 @@ public class Layer {
 			break;
 		case LayerProperty.TYPE_HYDROLOGY:
 			createDevOrHydroPropertyPanel(false);
+			break;
+		case LayerProperty.TYPE_ELEVATION:
+			createElevationPropertyPanel();
+			break;
+		case LayerProperty.TYPE_SLOPE:
+			//TODO
+			break;
+		case LayerProperty.TYPE_ASPECT:
+			//TODO
 			break;
 		default:
 			propertyPanel = new JPanel();
@@ -1539,6 +1633,8 @@ public class Layer {
 		GeneralLayers.generalLayer.repaint();
 	}
 	public void setMask() {
+		if (cbShowMask == null) return;
+		
 		if (cbShowMask.isSelected()) {
 			setImageMask();
 		} else {
@@ -1695,10 +1791,10 @@ public class Layer {
     	});
 		
 		createElementListModel();	
-		//updateVegetationPropertyPanel();
+		//updateVegetationPropertyPanel(); why?? // TODO
 	}
 	
-	private DistancePanel distancePanel;
+	private int distance;
 	private void createDevOrHydroPropertyPanel(boolean isDev) {
 		propertyPanel = new JPanel();
 		propertyPanel.setLayout(new BorderLayout());
@@ -1710,7 +1806,6 @@ public class Layer {
 		else 
 			layerType.setType(LayerProperty.TYPE_HYDROLOGY);
 			
-		
 		JPanel panel = new JPanel();
 		propertyPanel.add(panel, BorderLayout.CENTER);
 		BoxLayout boxLayoutLayers = new BoxLayout(panel, BoxLayout.PAGE_AXIS);
@@ -1725,7 +1820,7 @@ public class Layer {
 			
 			public void mouseReleased(MouseEvent e) {				
 				int index = listElement.locationToIndex(e.getPoint());
-				Element elementItem = listElement.getModel().getElementAt(index);
+				//Element elementItem = listElement.getModel().getElementAt(index);
 				int cursorX = e.getPoint().x;
 				if (cursorX < Element.iconwidth) {
 					// show color chooser
@@ -1735,19 +1830,6 @@ public class Layer {
 					// TODO update layerMap
 					//GeneralLayers.generalLayer.renderImageMap();
 					//GeneralLayers.generalLayer.repaint();
-				}
-				
-				if (btnSetInterest.isSelected()) {
-					elementItem.interest = !elementItem.interest; 
-					Rectangle rect = listElement.getCellBounds(index, index);
-					listElement.repaint(rect);
-					
-					// update property
-					property.interests.put(elementItem.value, elementItem.interest);
-					layerMask = getInterest();
-					renderMaskOfInterest();
-					GeneralLayers.generalLayer.renderImageMap();
-					GeneralLayers.generalLayer.repaint();
 				}
 				
 			}
@@ -1764,21 +1846,88 @@ public class Layer {
 		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
 
 		String btnName = "";
-		if (isDev) btnName = "Set Interests and Away Distance";
-		else btnName = "Set Interests and Close Distance";
+		if (isDev) {
+			btnName = "Set Away Distance";
+			distance = property.awayFrom;
+		} else {
+			btnName = "Set Close Distance";
+			distance = property.closeBy;
+		}
+		
+		JPanel distancePanel = new JPanel();
+		JButton btnDecrease = new JButton(" < ");
+		JButton btnIncrease= new JButton(" > ");
+		
+		btnDecrease.setEnabled(false);
+		btnIncrease.setEnabled(false);
 		
 		btnSetInterest = new JToggleButton(btnName);
 		btnSetInterest.setToolTipText(btnName);
 		control.add(btnSetInterest);
 		btnSetInterest.addActionListener(new ActionListener() {
     		public void actionPerformed(ActionEvent e) {
-    			// TODO ...
+    			if (btnSetInterest.isSelected()) {
+    				btnDecrease.setEnabled(true);
+    				btnIncrease.setEnabled(true);
+    			} else {
+    				btnDecrease.setEnabled(false);
+    				btnIncrease.setEnabled(false);
+    			}
     		}
     	});
-
-		if (isDev) distancePanel = new DistancePanel(property.awayFrom);
-		else distancePanel = new DistancePanel(property.closeBy);
+		btnSetInterest.setAlignmentX(Component.LEFT_ALIGNMENT);
+		
 		control.add(distancePanel);
+		distancePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+		distancePanel.setLayout(new BoxLayout(distancePanel, BoxLayout.LINE_AXIS));
+		JTextField textDistance = new JTextField(Integer.toString(distance));
+		textDistance.setEditable(false);
+		textDistance.setHorizontalAlignment(JTextField.CENTER);
+
+		distancePanel.add(btnDecrease);
+		distancePanel.add(textDistance);
+		distancePanel.add(btnIncrease);
+		
+		btnDecrease.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			if (distance > 0) {
+    				distance --;
+    				textDistance.setText(Integer.toString(distance));
+    				if (isDev) {
+						property.awayFrom = distance;
+						layerMask = getInterestWithDistance(false, property.awayFrom);
+					} else {
+						property.closeBy = distance;
+						layerMask = getInterestWithDistance(true, property.closeBy);
+					}
+						
+					renderMaskOfInterest();
+					GeneralLayers.generalLayer.renderImageMap();
+					GeneralLayers.generalLayer.repaint();
+    			}
+    			
+    		}
+    	});
+		
+		btnIncrease.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			if (distance < 25) {
+    				distance ++;
+        			textDistance.setText(Integer.toString(distance));
+
+					if (isDev) {
+						property.awayFrom = distance;
+						layerMask = getInterestWithDistance(false, property.awayFrom);
+					} else {
+						property.closeBy = distance;
+						layerMask = getInterestWithDistance(true, property.closeBy);
+					}
+					renderMaskOfInterest();
+					GeneralLayers.generalLayer.renderImageMap();
+					GeneralLayers.generalLayer.repaint();
+    			}
+    		}
+    	});
 		
 		cbAddToPicnicMap = new JCheckBox("Add to Picnic Map");
 		control.add(cbAddToPicnicMap);
@@ -1787,7 +1936,7 @@ public class Layer {
 				updatePicnicMap();
 			}
 		});
-		cbAddToPicnicMap.setSelected(false);
+		cbAddToPicnicMap.setSelected(true);
 		
 		cbShowMask = new JCheckBox("Show mask");
 		control.add(cbShowMask);
@@ -1800,7 +1949,7 @@ public class Layer {
 				}
 			}
 		});
-		cbShowMask.setSelected(true);
+		cbShowMask.setSelected(false);
 
 		JButton btnSaveChanges = new JButton("Save changes");
 		control.add(btnSaveChanges);
@@ -1811,14 +1960,7 @@ public class Layer {
     	});
 		
 		createElementListModel();	
-		//updateVegetationPropertyPanel();
 	}
-	
-	protected void updatePicnicMap() {
-		// TODO Auto-generated method stub
-		
-	}
-
 
 	private void createElementListModel() {
 		for (Double value : property.descriptions.keySet()) {
@@ -1830,8 +1972,17 @@ public class Layer {
 		}
 	}
 	
-	private void updateVegetationPropertyPanel() {
-		// TODO updateElementListModel
+	private void createElevationPropertyPanel() {
+		propertyPanel = new JPanel();
+		propertyPanel.setLayout(new BorderLayout());
+		
+		layerType = new LayerType();
+		propertyPanel.add(layerType, BorderLayout.NORTH);
+		layerType.setType(LayerProperty.TYPE_ELEVATION);
+	}
+	
+	protected void updatePicnicMap() {
+		// TODO Auto-generated method stub
 		
 	}
 	
@@ -1852,6 +2003,9 @@ public class Layer {
 		case LayerProperty.TYPE_DEVELOPMENT:
 		case LayerProperty.TYPE_HYDROLOGY:
 			des = property.descriptions.get(value);
+			break;
+		case LayerProperty.TYPE_ELEVATION:
+			des = "High = " + Double.toString(value);
 			break;
 
 		default:
