@@ -277,8 +277,8 @@ public class LayerPanel extends JPanel {
     		//add to property panel cards
     		propertyPanel.add(layer.propertyPanel, layer.name);
     		
-    		// TODO add SLOPE and ASPECT if layer type is ELEVATION
     		if (layer.property.type == LayerProperty.TYPE_ELEVATION) {
+    			// add Aspect under Evelation
     			Layer aspectLayer = layer.getAspect();
     			aspectLayer.path = layer.path;
     			aspectLayer.name = aspectLayer.name + " (" + layer.nCols + "x" + layer.nRows + ")";
@@ -286,12 +286,29 @@ public class LayerPanel extends JPanel {
     			aspectLayer.renderMap();
     			aspectLayer.createLayerMask();
     			aspectLayer.renderMaskOfInterest();
-    			//TODO
+    			//add to list model
+        		layerListModel.addElement(aspectLayer);
+        		//add to property panel cards
+        		propertyPanel.add(aspectLayer.propertyPanel, aspectLayer.name);
+    			
+    			// add Slope under Evelation
+        		//TODO
+        		Layer slopeLayer = layer.getSlope();
+    			slopeLayer.path = layer.path;
+    			slopeLayer.name = slopeLayer.name + " (" + layer.nCols + "x" + layer.nRows + ")";
+    			slopeLayer.loadProperty(LayerProperty.TYPE_SLOPE); // and create PropertyPane as well
+    			slopeLayer.renderMap();
+    			slopeLayer.createLayerMask();
+    			slopeLayer.renderMaskOfInterest();
+    			//add to list model
+        		layerListModel.addElement(slopeLayer);
+        		//add to property panel cards
+        		propertyPanel.add(slopeLayer.propertyPanel, slopeLayer.name);
     			
     		}
     		
-    		GeneralLayers.generalLayer.renderImageMap();
-    		GeneralLayers.generalLayer.repaint();
+    		GeneralLayers.generalMap.renderImageMap();
+    		GeneralLayers.generalMap.repaint();
     		
     	} else {
     		String msg = "ERROR! Cannot import layer from " + path;

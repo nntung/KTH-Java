@@ -36,6 +36,13 @@ public class LayerProperty {
 	public boolean[] aspectInterest;
 	public int[] aspectRange;
 	public ColorAlpha[] aspectColor;
+	public int transparent;
+	public String[] slopeDescription;
+	public boolean[] slopeInterest;
+	public int[] slopeRange;
+	public ColorAlpha[] slopeColor;
+	public static int numAspect = 10;
+	public static int numSlope = 7;
 	
 	public LayerProperty() {
 		type = TYPE_UNDEFINED;
@@ -80,9 +87,7 @@ public class LayerProperty {
 	}
 
 	private void parseElevationVegetation(Properties prop) {
-		// TODO Auto-generated method stub
 		// read Aspect property
-		int num = 10;
 		aspectDescription = new String[10];
 		aspectInterest = new boolean[10];
 		aspectRange = new int[10];
@@ -90,7 +95,7 @@ public class LayerProperty {
 		String key, des, color, range;
 		boolean like;
 		int v1=-1;
-		for (int i=0; i<num; i++) {
+		for (int i=0; i<numAspect; i++) {
 			// get value
 			key = "aspectvalue" + i;
 			try {
@@ -113,6 +118,43 @@ public class LayerProperty {
 			key = "aspectinterest" + i;
 			like = prop.getProperty(key).equals("yes") ? true : false;
 			aspectInterest[i] = like;
+		}
+		
+		// read Slope property
+		slopeDescription = new String[10];
+		slopeInterest = new boolean[10];
+		slopeRange = new int[10];
+		slopeColor = new ColorAlpha[10];
+		for (int i = 0; i < numSlope; i++) {
+			// get value
+			key = "slopevalue" + i;
+			try {
+				range = prop.getProperty(key);
+				v1 = Integer.parseInt(range);
+			} catch (NumberFormatException e) {
+				v1 = -1;
+			} finally {
+				slopeRange[i] = v1;
+			}
+			// get Description
+			key = "slopedes" + i;
+			des = prop.getProperty(key);
+			slopeDescription[i] = des;
+			// get Color
+			key = "slopecolor" + i;
+			color = prop.getProperty(key);
+			slopeColor[i] = new ColorAlpha(color);
+			// get Interest
+			key = "slopeinterest" + i;
+			like = prop.getProperty(key).equals("yes") ? true : false;
+			slopeInterest[i] = like;
+		}
+
+		// read Elevation property
+		try {
+			transparent = Integer.parseInt(prop.getProperty("transparent"));
+		} catch (NumberFormatException e) {
+			transparent = 150;
 		}
 	}
 

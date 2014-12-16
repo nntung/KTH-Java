@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.Properties;
 import java.util.Random;
 
+import javax.swing.BoundedRangeModel;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
@@ -39,9 +40,12 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSlider;
 import javax.swing.JTextField;
 import javax.swing.JToggleButton;
 import javax.swing.ListSelectionModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 import kth.ag2311.mapalgebra.view.ElementRenderer;
 import kth.ag2311.mapalgebra.view.LayerType;
@@ -1194,7 +1198,7 @@ public class Layer {
 	
 	// IMAGE of Layer
 	
-	private final static int defaultAlpha = 250;
+	private final static int defaultAlpha = 150;
 	public BufferedImage imageMap;
 	public void renderMap() {
 		imageMap = new BufferedImage(nCols, nRows, BufferedImage.TYPE_INT_ARGB);
@@ -1237,7 +1241,6 @@ public class Layer {
 			}
 			break;
 		case LayerProperty.TYPE_ASPECT:
-		case LayerProperty.TYPE_SLOPE:
 			for (int i = 0; i < nRows; i++) { // loop nRows
 				for (int j = 0; j < nCols; j++) { // loop nCols
 					// create color for this point
@@ -1249,8 +1252,20 @@ public class Layer {
 				}
 			}
 			break;
+		case LayerProperty.TYPE_SLOPE:
+			for (int i = 0; i < nRows; i++) { // loop nRows
+				for (int j = 0; j < nCols; j++) { // loop nCols
+					// create color for this point
+					double value = values[i][j];
+					if (value != nullValue) {
+						property.slopeColor[(int) value].getColor(colors);
+						raster.setPixel(j, i, colors);
+					}
+				}
+			}
+			break;
 
-		default:
+		case LayerProperty.TYPE_ELEVATION:
 			double grayscale = maxGray ;
 			if (maxValue > minValue)
 				grayscale = maxGray / (maxValue - minValue);
@@ -1264,7 +1279,7 @@ public class Layer {
 						colors[0] = value; // Alpha
 						colors[1] = value; // Red
 						colors[2] = value; // Green
-						colors[3] = defaultAlpha; // 250
+						colors[3] = property.transparent; // 250
 						raster.setPixel(j, i, colors);
 					}
 				}
@@ -1391,8 +1406,12 @@ public class Layer {
 			break;
 		case LayerProperty.TYPE_ELEVATION:
 			layerMask = null;
+			break;
 		case LayerProperty.TYPE_ASPECT:
 			layerMask = getAspectInterest();
+			break;
+		case LayerProperty.TYPE_SLOPE:
+			layerMask = getSlopeInterest();
 			break;
 
 		}
@@ -1505,6 +1524,23 @@ public class Layer {
 		return outLayer;
 	}
 	
+	private Layer getSlopeInterest() {
+		Layer outLayer = new Layer("interestMask", nRows, nCols, originX,
+				originY, resolution, 0);
+		
+		double value;
+		for (int i = 0; i < nRows; i++) { // loop nRows
+			for (int j = 0; j < nCols; j++) { // loop nCols
+				value = values[i][j];
+				if (property.slopeInterest[(int)value]) {
+					outLayer.values[i][j] = 1;
+				}
+			}
+		}
+		
+		return outLayer;
+	}
+	
 	public BufferedImage imageMask;
 	public void renderMaskOfInterest() {
 		// create buffer
@@ -1581,11 +1617,11 @@ public class Layer {
 		case LayerProperty.TYPE_ELEVATION:
 			createElevationPropertyPanel();
 			break;
-		case LayerProperty.TYPE_SLOPE:
-			//TODO
-			break;
 		case LayerProperty.TYPE_ASPECT:
 			createAspectPropertyPanel();
+			break;
+		case LayerProperty.TYPE_SLOPE:
+			createSlopePropertyPanel();
 			break;
 		default:
 			propertyPanel = new JPanel();
@@ -1679,24 +1715,24 @@ public class Layer {
 	
 	private void setThisLayerToShortestPathLayer() {
 		GeneralLayers.shortestPath = this;
-		GeneralLayers.generalLayer.renderImageMap();
-		GeneralLayers.generalLayer.repaint();
+		GeneralLayers.generalMap.renderImageMap();
+		GeneralLayers.generalMap.repaint();
 	}
 	private void removeThisLayerFromShortestPathLayer() {
 		GeneralLayers.shortestPath = null;
-		GeneralLayers.generalLayer.renderImageMap();
-		GeneralLayers.generalLayer.repaint();
+		GeneralLayers.generalMap.renderImageMap();
+		GeneralLayers.generalMap.repaint();
 	}
 	
 	public void setImageMask() {
 		GeneralLayers.maskLayer = this;
-		GeneralLayers.generalLayer.renderImageMap();
-		GeneralLayers.generalLayer.repaint();
+		GeneralLayers.generalMap.renderImageMap();
+		GeneralLayers.generalMap.repaint();
 	}
 	public void removeImageMask() {
 		GeneralLayers.maskLayer = null;
-		GeneralLayers.generalLayer.renderImageMap();
-		GeneralLayers.generalLayer.repaint();
+		GeneralLayers.generalMap.renderImageMap();
+		GeneralLayers.generalMap.repaint();
 	}
 	public void setMask() {
 		if (cbShowMask == null) return;
@@ -1748,7 +1784,7 @@ public class Layer {
 			isUpdate = updateRoadSelection(xx,yy);
 			break;
 		case LayerProperty.TYPE_VEGETATION:
-			//TODO isUpdate = updateVegetationSelection(xx,yy);
+			//TODO No need!
 			break;
 		}
 		return isUpdate;
@@ -1801,8 +1837,8 @@ public class Layer {
 					property.interests.put(elementItem.value, elementItem.interest);
 					layerMask = getInterest();
 					renderMaskOfInterest();
-					GeneralLayers.generalLayer.renderImageMap();
-					GeneralLayers.generalLayer.repaint();
+					GeneralLayers.generalMap.renderImageMap();
+					GeneralLayers.generalMap.repaint();
 				}
 				
 			}
@@ -1894,6 +1930,7 @@ public class Layer {
 					listElement.repaint(rect);
 					
 					// TODO update layerMap
+					// renderMap()
 					//GeneralLayers.generalLayer.renderImageMap();
 					//GeneralLayers.generalLayer.repaint();
 				}
@@ -1968,8 +2005,8 @@ public class Layer {
 					}
 						
 					renderMaskOfInterest();
-					GeneralLayers.generalLayer.renderImageMap();
-					GeneralLayers.generalLayer.repaint();
+					GeneralLayers.generalMap.renderImageMap();
+					GeneralLayers.generalMap.repaint();
     			}
     			
     		}
@@ -1989,8 +2026,8 @@ public class Layer {
 						layerMask = getInterestWithDistance(true, property.closeBy);
 					}
 					renderMaskOfInterest();
-					GeneralLayers.generalLayer.renderImageMap();
-					GeneralLayers.generalLayer.repaint();
+					GeneralLayers.generalMap.renderImageMap();
+					GeneralLayers.generalMap.repaint();
     			}
     		}
     	});
@@ -2068,6 +2105,7 @@ public class Layer {
 					listElement.repaint(rect);
 					
 					// TODO update layerMap
+					// renderMap(); // render Map again
 					//GeneralLayers.generalLayer.renderImageMap();
 					//GeneralLayers.generalLayer.repaint();
 				}
@@ -2078,11 +2116,11 @@ public class Layer {
 					listElement.repaint(rect);
 					
 					// update property
-					property.interests.put(elementItem.value, elementItem.interest);
-					layerMask = getInterest();
+					property.aspectInterest[elementItem.value.intValue()] = elementItem.interest;
+					layerMask = getAspectInterest();
 					renderMaskOfInterest();
-					GeneralLayers.generalLayer.renderImageMap();
-					GeneralLayers.generalLayer.repaint();
+					GeneralLayers.generalMap.renderImageMap();
+					GeneralLayers.generalMap.repaint();
 				}
 				
 			}
@@ -2140,11 +2178,124 @@ public class Layer {
 	}
 	
 	private void createAspectListModel() {
-		int num = 9;
+		int num = LayerProperty.numAspect - 1; // do not count the last (North)
 		for (int i = 0; i < num; i++) {
 			String des = property.aspectDescription[i];
 			ColorAlpha color = property.aspectColor[i];
 			Boolean interest = property.aspectInterest[i];
+			Element element = new Element((double) i, des, color, interest);
+			elementListModel.addElement(element);
+		}
+	}
+	
+	private void createSlopePropertyPanel() {
+		propertyPanel = new JPanel();
+		propertyPanel.setLayout(new BorderLayout());
+		
+		layerType = new LayerType();
+		propertyPanel.add(layerType, BorderLayout.NORTH);
+		layerType.setType(LayerProperty.TYPE_SLOPE);
+		
+		JPanel panel = new JPanel();
+		propertyPanel.add(panel, BorderLayout.CENTER);
+		BoxLayout boxLayoutLayers = new BoxLayout(panel, BoxLayout.PAGE_AXIS);
+		panel.setLayout(boxLayoutLayers);
+		
+		listElement = new JList<Element>();
+		listElement.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		listElement.setLayoutOrientation(JList.VERTICAL);
+		listElement.setVisibleRowCount(-1);
+		listElement.setCellRenderer(new ElementRenderer());
+		listElement.addMouseListener(new MouseAdapter() {
+			
+			public void mouseReleased(MouseEvent e) {				
+				int index = listElement.locationToIndex(e.getPoint());
+				Element elementItem = listElement.getModel().getElementAt(index);
+				int cursorX = e.getPoint().x;
+				if (cursorX < Element.iconwidth) {
+					// show color chooser
+					Rectangle rect = listElement.getCellBounds(index, index);
+					listElement.repaint(rect);
+					
+					// TODO update layerMap
+					// renderMap(); // render Map again
+					//GeneralLayers.generalLayer.renderImageMap();
+					//GeneralLayers.generalLayer.repaint();
+				}
+				
+				if (btnSetInterest.isSelected()) {
+					elementItem.interest = !elementItem.interest; 
+					Rectangle rect = listElement.getCellBounds(index, index);
+					listElement.repaint(rect);
+					
+					// update property
+					property.slopeInterest[elementItem.value.intValue()] = elementItem.interest;
+					layerMask = getSlopeInterest();
+					renderMaskOfInterest();
+					GeneralLayers.generalMap.renderImageMap();
+					GeneralLayers.generalMap.repaint();
+				}
+				
+			}
+		});
+		
+		elementListModel = new ElementListModel();
+		listElement.setModel(elementListModel);
+		
+		JScrollPane listScroller = new JScrollPane(listElement);
+		panel.add(listScroller);
+		
+		JPanel control = new JPanel();
+		propertyPanel.add(control, BorderLayout.SOUTH);
+		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
+
+		btnSetInterest = new JToggleButton("Set Interests");
+		control.add(btnSetInterest);
+		btnSetInterest.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			// TODO ...
+    		}
+    	});
+		
+		cbAddToPicnicMap = new JCheckBox("Add to Picnic Map");
+		control.add(cbAddToPicnicMap);
+		cbAddToPicnicMap.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				updatePicnicMap();
+			}
+		});
+		cbAddToPicnicMap.setSelected(true);
+		
+		cbShowMask = new JCheckBox("Show mask");
+		control.add(cbShowMask);
+		cbShowMask.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				if (cbShowMask.isSelected()) {
+					setImageMask();
+				} else {
+					removeImageMask();
+				}
+			}
+		});
+		cbShowMask.setSelected(false);
+
+		JButton btnSaveChanges = new JButton("Save changes");
+		control.add(btnSaveChanges);
+		btnSaveChanges.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			saveProperty();
+    		}
+    	});
+		
+		createSlopeListModel();	
+	}
+
+	private void createSlopeListModel() {
+		int num = LayerProperty.numSlope; 
+		for (int i = 0; i < num; i++) {
+			String des = property.slopeDescription[i];
+			ColorAlpha color = property.slopeColor[i];
+			Boolean interest = property.slopeInterest[i];
 			Element element = new Element((double) i, des, color, interest);
 			elementListModel.addElement(element);
 		}
@@ -2157,6 +2308,54 @@ public class Layer {
 		layerType = new LayerType();
 		propertyPanel.add(layerType, BorderLayout.NORTH);
 		layerType.setType(LayerProperty.TYPE_ELEVATION);
+		
+		JPanel panel = new JPanel();
+		propertyPanel.add(panel, BorderLayout.CENTER);
+		BoxLayout boxLayoutLayers = new BoxLayout(panel, BoxLayout.PAGE_AXIS);
+		panel.setLayout(boxLayoutLayers);
+		
+		JLabel textTrans = new JLabel("Set transparent of layer");
+		textTrans.setAlignmentX(Component.LEFT_ALIGNMENT);
+		panel.add(textTrans);
+		panel.add(Box.createRigidArea(new Dimension(0,5)));
+		JSlider sliderTransparent = new JSlider(JSlider.HORIZONTAL, 50, 250, 150);
+		panel.add(sliderTransparent);
+		sliderTransparent.setAlignmentX(Component.LEFT_ALIGNMENT);
+		sliderTransparent.setMinorTickSpacing(10);
+		sliderTransparent.setMajorTickSpacing(50);
+		sliderTransparent.setPaintTicks(true);
+		sliderTransparent.setSnapToTicks(true);
+		sliderTransparent.setPaintTrack(true);
+		sliderTransparent.setPaintLabels(true);
+		sliderTransparent.setValue(property.transparent);
+		sliderTransparent.setToolTipText(Integer.toString(sliderTransparent.getValue()));
+		
+		BoundedRangeModel sliderModel = sliderTransparent.getModel();
+		sliderModel.addChangeListener(new ChangeListener() {
+
+			@Override
+			public void stateChanged(ChangeEvent event) {
+				// update property and render Map again
+				property.transparent = sliderTransparent.getValue();
+				renderMap(); // render Map again
+				GeneralLayers.generalMap.renderImageMap();
+				GeneralLayers.generalMap.repaint();
+
+			}
+			
+		});
+		
+		JPanel control = new JPanel();
+		propertyPanel.add(control, BorderLayout.SOUTH);
+		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
+
+		JButton btnSaveChanges = new JButton("Save changes");
+		control.add(btnSaveChanges);
+		btnSaveChanges.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			saveProperty();
+    		}
+    	});
 	}
 	
 	protected void updatePicnicMap() {
@@ -2185,7 +2384,12 @@ public class Layer {
 		case LayerProperty.TYPE_ELEVATION:
 			des = "High = " + Double.toString(value);
 			break;
-
+		case LayerProperty.TYPE_ASPECT:
+			des = "aspect = " + property.aspectDescription[(int) value];
+			break;
+		case LayerProperty.TYPE_SLOPE:
+			des = "slope = " + property.slopeDescription[(int) value];
+			break;
 		default:
 			break;
 		}
@@ -2252,8 +2456,14 @@ public class Layer {
 				aspect = e; // just for remove warning
 				if (cell!=-1) {
 					int k = 1;
-					while (cell<property.aspectRange[k]) e++;
-					outLayer.values[row][col] = k;
+					while (k<LayerProperty.numAspect) {
+						if (cell>=property.aspectRange[k]) 
+							k++;
+						else
+							break;
+					}
+					if (k==10) k=2;
+					outLayer.values[row][col] = k - 1;
 				}
 			}
 		}
@@ -2303,8 +2513,21 @@ public class Layer {
 				Dzy = ((g + 2*h + i) - (a + 2*b + c)) / (40);
 				rise_run = Math.sqrt(Math.pow(Dzx,2) + Math.pow(Dzy,2));
 				slope = 57.29578 * Math.atan(rise_run);
+				
 				rise_run = e;	// remove warning of e
-				outLayer.values[row][col] = slope;	
+
+				int k = 0;
+				while (k<LayerProperty.numSlope) {
+					if (slope>=property.slopeRange[k]) 
+						k++;
+					else
+						break;
+				}
+				if (k==0) 
+					k=1; 
+				outLayer.values[row][col] = k - 1;
+				
+				//outLayer.values[row][col] = slope;	
 			}
 		}
 		

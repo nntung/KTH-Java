@@ -273,7 +273,7 @@ public class PicnicGIS {
 	    	layerMap = new LayerMap(appFrame);
 	    	appFrame.getContentPane().add(layerMap, BorderLayout.CENTER);
 	    	settingMouseEventToLayerMap();
-	    	GeneralLayers.generalLayer = layerMap;
+	    	GeneralLayers.generalMap = layerMap;
 	    	
 	    	JMenuBar menuBar = new JMenuBar();
 	    	appFrame.setJMenuBar(menuBar);
@@ -393,6 +393,7 @@ public class PicnicGIS {
 	        layerPane.setVisible(true);
 	        layerPane.setLayerMap(layerMap);
 	        layerMap.setLayerListModel(layerPane.getLayerListModel());
+	        GeneralLayers.generalLayers = layerPane;
 	        
 	    } catch (Exception ex) {
 	    	ex.printStackTrace();
