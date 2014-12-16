@@ -32,6 +32,7 @@ public class LayerMap extends JPanel {
 	public int scale;
 	
 	public boolean showPath;
+	public boolean showPicnicMap;
 	
 	public void setLayerListModel(LayerListModel layersModel) {
 		this.layerListModel = layersModel;
@@ -90,6 +91,15 @@ public class LayerMap extends JPanel {
 		if (GeneralLayers.maskLayer != null) {
 			if (GeneralLayers.maskLayer.isViewOnMap)
 				gbi.drawImage(GeneralLayers.maskLayer.imageMask, 0, 0, null);
+		}
+		
+		// view add last
+		if (showPicnicMap) {
+			if (GeneralLayers.picnicMap != null) {
+				if (GeneralLayers.picnicMap.imageMap != null) {
+					gbi.drawImage(GeneralLayers.picnicMap.imageMap, 0, 0, null);
+				}
+			}
 		}
 
 		// view add last

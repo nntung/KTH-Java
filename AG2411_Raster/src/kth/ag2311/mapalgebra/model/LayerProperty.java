@@ -12,6 +12,7 @@ public class LayerProperty {
 	public final static int TYPE_ELEVATION = 5;
 	public final static int TYPE_SLOPE = 6;
 	public final static int TYPE_ASPECT = 7;
+	public final static int TYPE_PICNIC = 8;
 	
 	public final static String ST_UNDEFINED = "?";
 	public final static String ST_ROAD = "road";

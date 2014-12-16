@@ -122,6 +122,10 @@ public class LayerPanel extends JPanel {
 					selectedLayer = null;
 					// update settings panel
 					changePropertyPanel();
+					// update picnic map
+					//GeneralLayers.updatePicnicMap();
+		    		GeneralLayers.generalMap.renderImageMap();
+		    		GeneralLayers.generalMap.repaint();
 	            }
 	        });
 		}
@@ -307,6 +311,7 @@ public class LayerPanel extends JPanel {
     			
     		}
     		
+    		//GeneralLayers.updatePicnicMap();
     		GeneralLayers.generalMap.renderImageMap();
     		GeneralLayers.generalMap.repaint();
     		

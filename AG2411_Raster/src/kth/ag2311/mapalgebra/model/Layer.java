@@ -1285,8 +1285,22 @@ public class Layer {
 				}
 			}
 			break;
+		case LayerProperty.TYPE_PICNIC:
+			colors[0] = 0; // Alpha
+			colors[1] = 250; // Red
+			colors[2] = 0; // Green
+			colors[3] = defaultAlpha; // 250
+
+			for (int i = 0; i < nRows; i++) { // loop nRows
+				for (int j = 0; j < nCols; j++) { // loop nCols
+					// create color for this point
+					if (values[i][j] != nullValue) {
+						raster.setPixel(j, i, colors);
+					}
+				}
+			}
+			break;
 		}
-		
 		
 	}
 	
@@ -1601,6 +1615,7 @@ public class Layer {
 	
 	public JPanel propertyPanel;
 	private void createPropertyPanel() {
+		isAddToPicnicMap = false;
 		switch (property.type) {
 		case LayerProperty.TYPE_ROAD:
 			createRoadPropertyPanel();
@@ -1793,7 +1808,7 @@ public class Layer {
 	private JList<Element> listElement;
 	private ElementListModel elementListModel;
 	private JToggleButton btnSetInterest;
-	private JCheckBox cbAddToPicnicMap;
+	public JCheckBox cbAddToPicnicMap;
 	private void createVegetationPropertyPanel() {
 		propertyPanel = new JPanel();
 		propertyPanel.setLayout(new BorderLayout());
@@ -2340,7 +2355,6 @@ public class Layer {
 				renderMap(); // render Map again
 				GeneralLayers.generalMap.renderImageMap();
 				GeneralLayers.generalMap.repaint();
-
 			}
 			
 		});
@@ -2358,9 +2372,14 @@ public class Layer {
     	});
 	}
 	
+	public boolean isAddToPicnicMap;
 	protected void updatePicnicMap() {
-		// TODO Auto-generated method stub
-		
+		isAddToPicnicMap = !isAddToPicnicMap;
+		if (isAddToPicnicMap) {
+			GeneralLayers.updatePicnicMap();
+			GeneralLayers.generalMap.renderImageMap();
+			GeneralLayers.generalMap.repaint();
+		}
 	}
 	
 	public String getDescription(int xx, int yy) {
@@ -2532,6 +2551,22 @@ public class Layer {
 		}
 		
 		return outLayer;
+	}
+
+	public void classify(Layer layerMask) {
+		for (int i = 0; i < nRows; i++) { // loop nRows
+			for (int j = 0; j < nCols; j++) { // loop nCols
+				values[i][j] = (values[i][j]>0 && layerMask.values[i][j]>0) ? 1 : 0;
+			}
+		}
+	}
+
+	public void getValues(Layer layerMask) {
+		for (int i = 0; i < nRows; i++) { // loop nRows
+			for (int j = 0; j < nCols; j++) { // loop nCols
+				values[i][j] = layerMask.values[i][j];
+			}
+		}
 	}
 
 

@@ -232,7 +232,17 @@ public class PicnicGIS {
 				toolBar.add(btnPicnicMap);
 				btnPicnicMap.addActionListener(new ActionListener() {
 		    		public void actionPerformed(ActionEvent e) {
-		    			//TODO Show Picnic map
+		    			if (btnPicnicMap.isSelected()) {
+		    				layerMap.showPicnicMap = true;
+		    				GeneralLayers.updatePicnicMap();
+		    				layerMap.renderImageMap();
+		    				layerMap.repaint();
+		    			} else {
+		    				layerMap.showPicnicMap = false;
+		    				GeneralLayers.updatePicnicMap();
+		    				layerMap.renderImageMap();
+		    				layerMap.repaint();
+		    			}
 		    		}
 		    	});
 			}
