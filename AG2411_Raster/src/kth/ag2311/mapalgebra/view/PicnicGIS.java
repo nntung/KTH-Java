@@ -411,7 +411,9 @@ public class PicnicGIS {
 					layerPane.updateSelection(pX, pY);
 					statusX.setText("X = " + pX);
 					statusY.setText("Y = " + pY);
-					statusText.setText(layerPane.selectedLayer.getDescription(pX, pY));
+					if (layerPane.selectedLayer!=null) {
+						statusText.setText(layerPane.selectedLayer.getDescription(pX, pY));
+					}
 		        }
 		    }
 

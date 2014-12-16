@@ -28,4 +28,15 @@ public class Element {
 			alpha = 0;
 		}
 	}
+	
+	public Element(Double val, String des, ColorAlpha color, Boolean like) {
+		value = val;
+		description = des;
+		interest = like;
+		
+		red = color.red;
+		green = color.green;
+		blue = color.blue;
+		alpha = color.alpha;
+	}
 } 

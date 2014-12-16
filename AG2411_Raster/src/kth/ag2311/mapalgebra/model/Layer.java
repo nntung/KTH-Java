@@ -1206,6 +1206,8 @@ public class Layer {
 
         // set each point        
 		WritableRaster raster = imageMap.getRaster();
+		
+		int[] colors = new int[4];
 
 		switch (property.type) {
 		case LayerProperty.TYPE_ROAD:
@@ -1223,13 +1225,25 @@ public class Layer {
 		case LayerProperty.TYPE_VEGETATION:
 		case LayerProperty.TYPE_DEVELOPMENT:
 		case LayerProperty.TYPE_HYDROLOGY:
-			int[] colors = new int[4];
 			for (int i = 0; i < nRows; i++) { // loop nRows
 				for (int j = 0; j < nCols; j++) { // loop nCols
 					// create color for this point
 					double value = values[i][j];
 					if (value != nullValue) {
 						property.colorAlphas.get(value).getColor(colors);
+						raster.setPixel(j, i, colors);
+					}
+				}
+			}
+			break;
+		case LayerProperty.TYPE_ASPECT:
+		case LayerProperty.TYPE_SLOPE:
+			for (int i = 0; i < nRows; i++) { // loop nRows
+				for (int j = 0; j < nCols; j++) { // loop nCols
+					// create color for this point
+					double value = values[i][j];
+					if (value != nullValue) {
+						property.aspectColor[(int) value].getColor(colors);
 						raster.setPixel(j, i, colors);
 					}
 				}
@@ -1242,17 +1256,16 @@ public class Layer {
 				grayscale = maxGray / (maxValue - minValue);
 			
 			// write data to raster
-			int[] color = new int[4];
 			for (int i = 0; i < nRows; i++) { // loop nRows
 				for (int j = 0; j < nCols; j++) { // loop nCols
 					// create color for this point
 					if (values[i][j] != nullValue) {
 						int value = (int) ((values[i][j] - minValue) * grayscale);
-						color[0] = value; // Alpha
-						color[1] = value; // Red
-						color[2] = value; // Green
-						color[3] = defaultAlpha; // 250
-						raster.setPixel(j, i, color);
+						colors[0] = value; // Alpha
+						colors[1] = value; // Red
+						colors[2] = value; // Green
+						colors[3] = defaultAlpha; // 250
+						raster.setPixel(j, i, colors);
 					}
 				}
 			}
@@ -1296,7 +1309,39 @@ public class Layer {
 				}
 			}
 		}
+	}
+	
+	public void loadProperty(int type) {
+		int pos = path.lastIndexOf(".");
+		String proPath = (pos > 0) ? path.substring(0, pos) : path;
+		proPath = proPath + FILE_EXTENSION_PROPERTY;
 		
+		Properties prop = new Properties();
+		InputStream input = null;
+		property = new LayerProperty(); 
+		try {
+	 
+			input = new FileInputStream(proPath);
+	 
+			// load a properties file
+			prop.load(input);
+			property.setProperty(prop);
+			property.type = type; // this is a different
+			propertyChange = false;
+	 
+		} catch (IOException ex) {
+			// TODO Show warning message that the layer does not have property file
+			ex.printStackTrace();
+		} finally {
+			createPropertyPanel();
+			if (input != null) {
+				try {
+					input.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 
 	public void saveProperty() {
@@ -1346,6 +1391,8 @@ public class Layer {
 			break;
 		case LayerProperty.TYPE_ELEVATION:
 			layerMask = null;
+		case LayerProperty.TYPE_ASPECT:
+			layerMask = getAspectInterest();
 			break;
 
 		}
@@ -1440,7 +1487,24 @@ public class Layer {
 		
 		return outLayer;
 	}
-
+	
+	private Layer getAspectInterest() {
+		Layer outLayer = new Layer("interestMask", nRows, nCols, originX,
+				originY, resolution, 0);
+		
+		double value;
+		for (int i = 0; i < nRows; i++) { // loop nRows
+			for (int j = 0; j < nCols; j++) { // loop nCols
+				value = values[i][j];
+				if (property.aspectInterest[(int)value]) {
+					outLayer.values[i][j] = 1;
+				}
+			}
+		}
+		
+		return outLayer;
+	}
+	
 	public BufferedImage imageMask;
 	public void renderMaskOfInterest() {
 		// create buffer
@@ -1459,6 +1523,8 @@ public class Layer {
 		case LayerProperty.TYPE_VEGETATION:
 		case LayerProperty.TYPE_DEVELOPMENT:
 		case LayerProperty.TYPE_HYDROLOGY:
+		case LayerProperty.TYPE_ASPECT:
+		case LayerProperty.TYPE_SLOPE:
 			createInterestMask();
 			break;
 		}
@@ -1519,7 +1585,7 @@ public class Layer {
 			//TODO
 			break;
 		case LayerProperty.TYPE_ASPECT:
-			//TODO
+			createAspectPropertyPanel();
 			break;
 		default:
 			propertyPanel = new JPanel();
@@ -1972,6 +2038,118 @@ public class Layer {
 		}
 	}
 	
+	private void createAspectPropertyPanel() {
+		propertyPanel = new JPanel();
+		propertyPanel.setLayout(new BorderLayout());
+		
+		layerType = new LayerType();
+		propertyPanel.add(layerType, BorderLayout.NORTH);
+		layerType.setType(LayerProperty.TYPE_ASPECT);
+		
+		JPanel panel = new JPanel();
+		propertyPanel.add(panel, BorderLayout.CENTER);
+		BoxLayout boxLayoutLayers = new BoxLayout(panel, BoxLayout.PAGE_AXIS);
+		panel.setLayout(boxLayoutLayers);
+		
+		listElement = new JList<Element>();
+		listElement.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		listElement.setLayoutOrientation(JList.VERTICAL);
+		listElement.setVisibleRowCount(-1);
+		listElement.setCellRenderer(new ElementRenderer());
+		listElement.addMouseListener(new MouseAdapter() {
+			
+			public void mouseReleased(MouseEvent e) {				
+				int index = listElement.locationToIndex(e.getPoint());
+				Element elementItem = listElement.getModel().getElementAt(index);
+				int cursorX = e.getPoint().x;
+				if (cursorX < Element.iconwidth) {
+					// show color chooser
+					Rectangle rect = listElement.getCellBounds(index, index);
+					listElement.repaint(rect);
+					
+					// TODO update layerMap
+					//GeneralLayers.generalLayer.renderImageMap();
+					//GeneralLayers.generalLayer.repaint();
+				}
+				
+				if (btnSetInterest.isSelected()) {
+					elementItem.interest = !elementItem.interest; 
+					Rectangle rect = listElement.getCellBounds(index, index);
+					listElement.repaint(rect);
+					
+					// update property
+					property.interests.put(elementItem.value, elementItem.interest);
+					layerMask = getInterest();
+					renderMaskOfInterest();
+					GeneralLayers.generalLayer.renderImageMap();
+					GeneralLayers.generalLayer.repaint();
+				}
+				
+			}
+		});
+		
+		elementListModel = new ElementListModel();
+		listElement.setModel(elementListModel);
+		
+		JScrollPane listScroller = new JScrollPane(listElement);
+		panel.add(listScroller);
+		
+		JPanel control = new JPanel();
+		propertyPanel.add(control, BorderLayout.SOUTH);
+		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
+
+		btnSetInterest = new JToggleButton("Set Interests");
+		control.add(btnSetInterest);
+		btnSetInterest.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			// TODO ...
+    		}
+    	});
+		
+		cbAddToPicnicMap = new JCheckBox("Add to Picnic Map");
+		control.add(cbAddToPicnicMap);
+		cbAddToPicnicMap.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				updatePicnicMap();
+			}
+		});
+		cbAddToPicnicMap.setSelected(true);
+		
+		cbShowMask = new JCheckBox("Show mask");
+		control.add(cbShowMask);
+		cbShowMask.addItemListener(new ItemListener() {
+			public void itemStateChanged(ItemEvent e) {
+				if (cbShowMask.isSelected()) {
+					setImageMask();
+				} else {
+					removeImageMask();
+				}
+			}
+		});
+		cbShowMask.setSelected(false);
+
+		JButton btnSaveChanges = new JButton("Save changes");
+		control.add(btnSaveChanges);
+		btnSaveChanges.addActionListener(new ActionListener() {
+    		public void actionPerformed(ActionEvent e) {
+    			saveProperty();
+    		}
+    	});
+		
+		createAspectListModel();	
+	}
+	
+	private void createAspectListModel() {
+		int num = 9;
+		for (int i = 0; i < num; i++) {
+			String des = property.aspectDescription[i];
+			ColorAlpha color = property.aspectColor[i];
+			Boolean interest = property.aspectInterest[i];
+			Element element = new Element((double) i, des, color, interest);
+			elementListModel.addElement(element);
+		}
+	}
+
 	private void createElevationPropertyPanel() {
 		propertyPanel = new JPanel();
 		propertyPanel.setLayout(new BorderLayout());
@@ -2014,5 +2192,124 @@ public class Layer {
 		
 		return des;
 	}
+	
+	public Layer getAspect() {
+		Layer outLayer = new Layer("aspect", nRows, nCols, originX,
+				originY, resolution, nullValue);
+		double[][] sw = new double[3][3];
+		Point ps = new Point(1,1);
+		int xs, ys, xv, yv;
+		double Dzx, Dzy;
+		double a, b, c, d, e, f, g, h, i;
+		double aspect;
+		double cell;
+		for (int row = 0; row < nRows; row++) { // loop nRows
+			for (int col = 0; col < nCols; col++) { // loop nCols
+				//create slide window values
+				sw[ps.y][ps.x] = values[row][col];
+				for (int k=0; k<8; k++) {
+					xs = ps.x + dx[k];
+					ys = ps.y + dy[k];
+					xv = col + dx[k];
+					yv = row + dy[k];
+					if (isValidPoint(new Point(xv,yv))) {
+						sw[ys][xs] = values[yv][xv];
+					} else {
+						sw[ys][xs] = values[row][col];
+					}
+				}
+				// calculate aspect
+				// a b c
+				// d e f
+				// g h i
+				// [dz/dx] = ((c + 2f + i) - (a + 2d + g)) / 8
+				// [dz/dy] = ((g + 2h + i) - (a + 2b + c)) / 8
+				// aspect = 57.29578 * atan2 ([dz/dy], -[dz/dx])
+				// if aspect < 0
+				//    cell = 90.0 - aspect
+				//  else if aspect > 90.0
+				//    cell = 360.0 - aspect + 90.0
+				//  else
+				//    cell = 90.0 - aspect
+				a = sw[0][0]; b = sw[0][1]; c = sw[0][2];
+				d = sw[1][0]; e = sw[1][1]; f = sw[1][2];
+				g = sw[1][0]; h = sw[1][1]; i = sw[1][2];
+				Dzx = ((c + 2*f + i) - (a + 2*d + g)) / 8;
+				Dzy = ((g + 2*h + i) - (a + 2*b + c)) / 8;
+				if (Dzx==0 && Dzy==0) {
+					cell = -1;
+				} else {
+					aspect = 57.29578 * Math.atan2 (Dzy, -Dzx);
+					if (aspect < 0) {
+						cell = 90.0 - aspect;
+					} else if (aspect > 90.0) {
+						cell = 360.0 - aspect + 90.0;
+					} else {
+						cell = 90.0 - aspect;
+					}
+				}
+				
+				aspect = e; // just for remove warning
+				if (cell!=-1) {
+					int k = 1;
+					while (cell<property.aspectRange[k]) e++;
+					outLayer.values[row][col] = k;
+				}
+			}
+		}
+		
+		return outLayer;
+	}
+
+	public Layer getSlope() {
+		Layer outLayer = new Layer("slope", nRows, nCols, originX,
+				originY, resolution, nullValue);
+		double[][] sw = new double[3][3];
+		Point ps = new Point(1,1);
+		int xs, ys, xv, yv;
+		double Dzx, Dzy;
+		double a, b, c, d, e, f, g, h, i;
+		double slope;
+		double rise_run;
+		for (int row = 0; row < nRows; row++) { // loop nRows
+			for (int col = 0; col < nCols; col++) { // loop nCols
+				//create slide window values
+				sw[ps.y][ps.x] = values[row][col];
+				for (int k=0; k<8; k++) {
+					xs = ps.x + dx[k];
+					ys = ps.y + dy[k];
+					xv = col + dx[k];
+					yv = row + dy[k];
+					if (isValidPoint(new Point(xv,yv))) {
+						sw[ys][xs] = values[yv][xv];
+					} else {
+						sw[ys][xs] = values[row][col];
+					}
+				}
+				// calculate slope
+				// a b c
+				// d e f
+				// g h i
+				// [dz/dx] = ((c + 2f + i) - (a + 2d + g) / (8 * x_cellsize)
+				// x_cellsize = 5 be default
+				// [dz/dy] = ((g + 2h + i) - (a + 2b + c)) / (8 * y_cellsize)
+				// y_cellsize = 5 be default
+				//  rise_run = sqrt([dz/dx]2 + [dz/dy]2]
+				//  slope_degrees = ATAN (rise_run) * 57.29578
+				a = sw[0][0]; b = sw[0][1]; c = sw[0][2];
+				d = sw[1][0]; e = sw[1][1]; f = sw[1][2];
+				g = sw[1][0]; h = sw[1][1]; i = sw[1][2];
+				Dzx = ((c + 2*f + i) - (a + 2*d + g)) / (40);
+				Dzy = ((g + 2*h + i) - (a + 2*b + c)) / (40);
+				rise_run = Math.sqrt(Math.pow(Dzx,2) + Math.pow(Dzy,2));
+				slope = 57.29578 * Math.atan(rise_run);
+				rise_run = e;	// remove warning of e
+				outLayer.values[row][col] = slope;	
+			}
+		}
+		
+		return outLayer;
+	}
+
 
 }

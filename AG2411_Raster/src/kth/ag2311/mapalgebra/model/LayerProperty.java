@@ -32,7 +32,10 @@ public class LayerProperty {
 	public int awayFrom;
 	public int closeBy;
 	// type Elevation
-	
+	public String[] aspectDescription;
+	public boolean[] aspectInterest;
+	public int[] aspectRange;
+	public ColorAlpha[] aspectColor;
 	
 	public LayerProperty() {
 		type = TYPE_UNDEFINED;
@@ -78,7 +81,39 @@ public class LayerProperty {
 
 	private void parseElevationVegetation(Properties prop) {
 		// TODO Auto-generated method stub
-		
+		// read Aspect property
+		int num = 10;
+		aspectDescription = new String[10];
+		aspectInterest = new boolean[10];
+		aspectRange = new int[10];
+		aspectColor = new ColorAlpha[10];
+		String key, des, color, range;
+		boolean like;
+		int v1=-1;
+		for (int i=0; i<num; i++) {
+			// get value
+			key = "aspectvalue" + i;
+			try {
+				range = prop.getProperty(key);
+				v1 = Integer.parseInt(range);
+			} catch (NumberFormatException e) {
+				v1 = -1;
+			} finally {
+				aspectRange[i] = v1;
+			}
+			// get Description
+			key = "aspectdes" + i;
+			des = prop.getProperty(key);
+			aspectDescription[i] = des;
+			// get Color
+			key = "aspectcolor" + i;
+			color = prop.getProperty(key);
+			aspectColor[i] = new ColorAlpha(color);
+			// get Interest
+			key = "aspectinterest" + i;
+			like = prop.getProperty(key).equals("yes") ? true : false;
+			aspectInterest[i] = like;
+		}
 	}
 
 	private void parseTypeHydrology(Properties prop) {

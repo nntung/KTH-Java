@@ -38,6 +38,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import kth.ag2311.mapalgebra.model.GeneralLayers;
 import kth.ag2311.mapalgebra.model.Layer;
 import kth.ag2311.mapalgebra.model.LayerListModel;
+import kth.ag2311.mapalgebra.model.LayerProperty;
 
 public class LayerPanel extends JPanel {
 
@@ -277,6 +278,17 @@ public class LayerPanel extends JPanel {
     		propertyPanel.add(layer.propertyPanel, layer.name);
     		
     		// TODO add SLOPE and ASPECT if layer type is ELEVATION
+    		if (layer.property.type == LayerProperty.TYPE_ELEVATION) {
+    			Layer aspectLayer = layer.getAspect();
+    			aspectLayer.path = layer.path;
+    			aspectLayer.name = aspectLayer.name + " (" + layer.nCols + "x" + layer.nRows + ")";
+    			aspectLayer.loadProperty(LayerProperty.TYPE_ASPECT); // and create PropertyPane as well
+    			aspectLayer.renderMap();
+    			aspectLayer.createLayerMask();
+    			aspectLayer.renderMaskOfInterest();
+    			//TODO
+    			
+    		}
     		
     		GeneralLayers.generalLayer.renderImageMap();
     		GeneralLayers.generalLayer.repaint();
