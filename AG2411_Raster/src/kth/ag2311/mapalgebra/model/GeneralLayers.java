@@ -25,10 +25,10 @@ public class GeneralLayers {
 		Layer layer = layerlist.get(0);
 		picnicMap = new Layer("picnicMask", layer.nRows, layer.nCols, layer.originX,
 				layer.originY, layer.resolution, 0);
-		picnicMap.getValues(layer.layerMask);
+		picnicMap.setOnes();
 		
 		int numOfLayer = layerlist.getSize();
-		for (int i=1; i<numOfLayer; i++) {
+		for (int i=0; i<numOfLayer; i++) {
 			layer = layerlist.get(i);
 			if (layer.isAddToPicnicMap) {
 				picnicMap.classify(layer.layerMask);

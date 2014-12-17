@@ -119,6 +119,7 @@ public class PicnicGIS {
 
 	        appFrame.getContentPane().add(toolBar,BorderLayout.NORTH);
 			{
+				/*
 				URL urlLoad = ClassLoader.getSystemResource("images/folder.png");
 		        ImageIcon iconLoad = new ImageIcon(urlLoad);
 			    URL urlSave = ClassLoader.getSystemResource("images/save_floppy_disk.png");
@@ -148,6 +149,7 @@ public class PicnicGIS {
 				}
 				
 				toolBar.add(new JSeparator(SwingConstants.VERTICAL));
+				*/
 				
 				JToggleButton btnMouseSelect = new JToggleButton();
 				JToggleButton btnMouseMove = new JToggleButton();
@@ -291,6 +293,7 @@ public class PicnicGIS {
 	    	JMenu mnApp = new JMenu("App");
 	    	menuBar.add(mnApp);
 	    	
+	    	/*
 	    	JMenuItem mntmLoadMap = new JMenuItem("Load Map");
 	    	mntmLoadMap.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_L, InputEvent.CTRL_MASK));
 	    	mntmLoadMap.addActionListener(new ActionListener() {
@@ -310,6 +313,7 @@ public class PicnicGIS {
 	    	mnApp.add(mntmSaveMap);
 
 	    	mnApp.add(new JSeparator());
+	    	*/
 	    	
 	    	JMenuItem mntmExit = new JMenuItem("Exit");
 	    	mntmExit.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Q, InputEvent.CTRL_MASK));
@@ -383,10 +387,10 @@ public class PicnicGIS {
 	        });
 	    	mnView.add(mntmcbStatusBar);
 	        
-	        JCheckBoxMenuItem mntmcbLayerManager = new JCheckBoxMenuItem("show Layer Manager");
-	        mntmcbLayerManager.setState(true);
+	        JCheckBoxMenuItem mntmcbLayerList = new JCheckBoxMenuItem("show Layer List");
+	        mntmcbLayerList.setState(true);
 
-	        mntmcbLayerManager.addActionListener(new ActionListener() {
+	        mntmcbLayerList.addActionListener(new ActionListener() {
 	            @Override
 	            public void actionPerformed(ActionEvent event) {
 	              if (layerPane.isVisible()) {
@@ -396,7 +400,7 @@ public class PicnicGIS {
 	              }
 	            }
 	        });
-	        mnView.add(mntmcbLayerManager);
+	        mnView.add(mntmcbLayerList);
 	        
 	        layerPane = new LayerPanel(appFrame);
 	        appFrame.getContentPane().add(layerPane, BorderLayout.EAST);

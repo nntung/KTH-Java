@@ -855,8 +855,9 @@ public class Layer {
 		else 
 			return true;
 	}
-	
+	private int shortestLength;
 	public Layer getShortestPath(int fromX, int fromY, int toX, int toY) {
+		shortestLength = 0;
 		Point startingPoint = new Point(fromX, fromY);
 		Point endingPoint = new Point(toX, toY);
 		
@@ -865,12 +866,13 @@ public class Layer {
 		
 		Layer outLayer = new Layer("visitedLayer", nRows, nCols, originX,
 				originY, resolution, 0);
-		
+		/*
 		for (int i=0; i<8; i++) {
 			// calculate coordinates
 			outLayer.values[startingPoint.y + dy[i]][startingPoint.x + dx[i]] = shortestPoint;
 			outLayer.values[endingPoint.y + dy[i]][endingPoint.x + dx[i]] = shortestPoint;
 		}
+		*/
 				
 		Layer visited = new Layer("visitedLayer", nRows, nCols, originX,
 				originY, resolution, 0);
@@ -1094,6 +1096,7 @@ public class Layer {
 			
 			// trace back from endingOnRoad to starting Point
 			while (visited.getPoint(endingOnRoad) != 1000) {
+				shortestLength++;
 				outLayer.setPoint(endingOnRoad, shortestValue);
 				int direction = (int) visited.getPoint(endingOnRoad); 
 				switch (direction) {
@@ -1135,6 +1138,7 @@ public class Layer {
 			// trace back from endingFromRoad to ending Point
 
 			while (visited.getPoint(endingFromRoad) != 1000) {
+				shortestLength++;
 				outLayer.setPoint(endingFromRoad, shortestValue);
 				int direction = (int) visited.getPoint(endingFromRoad); 
 				switch (direction) {
@@ -1173,7 +1177,11 @@ public class Layer {
 				}
 			}
 		}
-				
+		
+		// do a trick to update lbShortestLength here
+		if (lbShortestLength!=null)
+			lbShortestLength.setText("Shortest Length = " + shortestLength);
+		
 		return outLayer;
 	}
 
@@ -1323,7 +1331,6 @@ public class Layer {
 			// load a properties file
 			prop.load(input);
 			property.setProperty(prop);
-			propertyChange = false;
 	 
 		} catch (IOException ex) {
 			// TODO Show warning message that the layer does not have property file
@@ -1356,7 +1363,6 @@ public class Layer {
 			prop.load(input);
 			property.setProperty(prop);
 			property.type = type; // this is a different
-			propertyChange = false;
 	 
 		} catch (IOException ex) {
 			// TODO Show warning message that the layer does not have property file
@@ -1644,7 +1650,6 @@ public class Layer {
 	}
 	
 	// General Property Panel
-	private boolean propertyChange;
 	private LayerType layerType;
 	JCheckBox cbShowMask;
 	
@@ -1652,6 +1657,7 @@ public class Layer {
 	JToggleButton btnStart;
 	JToggleButton btnEnd;
 	JCheckBox cbAddToShortestPath;
+	JLabel lbShortestLength;
 	
 	private void createRoadPropertyPanel() {
 		propertyPanel = new JPanel();
@@ -1690,11 +1696,16 @@ public class Layer {
     			}
     		}
     	});
+
+		// Add shortest Length
+		lbShortestLength = new JLabel("Shortest Length = 0");
+		panel.add(lbShortestLength);
+		lbShortestLength.setAlignmentX(Component.CENTER_ALIGNMENT);
 		
 		JPanel control = new JPanel();
 		propertyPanel.add(control, BorderLayout.SOUTH);
 		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
-
+		
 		cbAddToShortestPath = new JCheckBox("Add to Shortest Path");
 		control.add(cbAddToShortestPath);
 		cbAddToShortestPath.addItemListener(new ItemListener() {
@@ -1709,7 +1720,7 @@ public class Layer {
 		cbAddToShortestPath.setSelected(true);
 		
 		cbShowMask = new JCheckBox("Show mask");
-		control.add(cbShowMask);
+		//control.add(cbShowMask);
 		cbShowMask.addItemListener(new ItemListener() {
 			public void itemStateChanged(ItemEvent e) {
 				setMask();
@@ -1717,14 +1728,6 @@ public class Layer {
 		});
 		cbShowMask.setSelected(true);
 
-		JButton btnSaveChanges = new JButton("Save changes");
-		control.add(btnSaveChanges);
-		btnSaveChanges.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			saveProperty();
-    		}
-    	});
-			
 		updateRoadPropertyPanel();
 	}
 	
@@ -1770,22 +1773,22 @@ public class Layer {
 	
 	private boolean updateRoadSelection(int xx, int yy) {
 		if (btnStart.isSelected()) {
-			propertyChange = true;
 			property.startX = xx;
 			property.startY = yy;
 			updateRoadPropertyPanel();
 			layerMask = getShortestPath(property.startX, property.startY, 
 					property.endX, property.endY);
+			lbShortestLength.setText("Shortest Length = " + shortestLength);
 			renderMaskOfInterest();
 			return true;
 		}
 		if (btnEnd.isSelected()) {
-			propertyChange = true;
 			property.endX = xx;
 			property.endY = yy;
 			updateRoadPropertyPanel();
 			layerMask = getShortestPath(property.startX, property.startY, 
 					property.endX, property.endY);
+			lbShortestLength.setText("Shortest Length = " + shortestLength);
 			renderMaskOfInterest();
 			return true;
 		}
@@ -1807,7 +1810,7 @@ public class Layer {
 	
 	private JList<Element> listElement;
 	private ElementListModel elementListModel;
-	private JToggleButton btnSetInterest;
+	//private JToggleButton btnSetInterest;
 	public JCheckBox cbAddToPicnicMap;
 	private void createVegetationPropertyPanel() {
 		propertyPanel = new JPanel();
@@ -1841,9 +1844,7 @@ public class Layer {
 					// TODO update layerMap
 					//GeneralLayers.generalLayer.renderImageMap();
 					//GeneralLayers.generalLayer.repaint();
-				}
-				
-				if (btnSetInterest.isSelected()) {
+				} else {
 					elementItem.interest = !elementItem.interest; 
 					Rectangle rect = listElement.getCellBounds(index, index);
 					listElement.repaint(rect);
@@ -1869,14 +1870,6 @@ public class Layer {
 		propertyPanel.add(control, BorderLayout.SOUTH);
 		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
 
-		btnSetInterest = new JToggleButton("Set Interests");
-		control.add(btnSetInterest);
-		btnSetInterest.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			// TODO ...
-    		}
-    	});
-		
 		cbAddToPicnicMap = new JCheckBox("Add to Picnic Map");
 		control.add(cbAddToPicnicMap);
 		cbAddToPicnicMap.addItemListener(new ItemListener() {
@@ -1884,7 +1877,6 @@ public class Layer {
 				updatePicnicMap();
 			}
 		});
-		cbAddToPicnicMap.setSelected(true);
 		
 		cbShowMask = new JCheckBox("Show mask");
 		control.add(cbShowMask);
@@ -1897,16 +1889,7 @@ public class Layer {
 				}
 			}
 		});
-		cbShowMask.setSelected(false);
 
-		JButton btnSaveChanges = new JButton("Save changes");
-		control.add(btnSaveChanges);
-		btnSaveChanges.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			saveProperty();
-    		}
-    	});
-		
 		createElementListModel();	
 		//updateVegetationPropertyPanel(); why?? // TODO
 	}
@@ -1963,38 +1946,22 @@ public class Layer {
 		propertyPanel.add(control, BorderLayout.SOUTH);
 		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
 
-		String btnName = "";
+		String lbName = "";
 		if (isDev) {
-			btnName = "Set Away Distance";
+			lbName = "Set Away Distance";
 			distance = property.awayFrom;
 		} else {
-			btnName = "Set Close Distance";
+			lbName = "Set Close Distance";
 			distance = property.closeBy;
 		}
 		
 		JPanel distancePanel = new JPanel();
 		JButton btnDecrease = new JButton(" < ");
 		JButton btnIncrease= new JButton(" > ");
-		
-		btnDecrease.setEnabled(false);
-		btnIncrease.setEnabled(false);
-		
-		btnSetInterest = new JToggleButton(btnName);
-		btnSetInterest.setToolTipText(btnName);
-		control.add(btnSetInterest);
-		btnSetInterest.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			if (btnSetInterest.isSelected()) {
-    				btnDecrease.setEnabled(true);
-    				btnIncrease.setEnabled(true);
-    			} else {
-    				btnDecrease.setEnabled(false);
-    				btnIncrease.setEnabled(false);
-    			}
-    		}
-    	});
-		btnSetInterest.setAlignmentX(Component.LEFT_ALIGNMENT);
-		
+		JLabel btnSettings = new JLabel(lbName);
+		control.add(btnSettings);
+		btnSettings.setAlignmentX(Component.LEFT_ALIGNMENT);
+			
 		control.add(distancePanel);
 		distancePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
 		distancePanel.setLayout(new BoxLayout(distancePanel, BoxLayout.LINE_AXIS));
@@ -2054,7 +2021,6 @@ public class Layer {
 				updatePicnicMap();
 			}
 		});
-		cbAddToPicnicMap.setSelected(true);
 		
 		cbShowMask = new JCheckBox("Show mask");
 		control.add(cbShowMask);
@@ -2067,16 +2033,7 @@ public class Layer {
 				}
 			}
 		});
-		cbShowMask.setSelected(false);
 
-		JButton btnSaveChanges = new JButton("Save changes");
-		control.add(btnSaveChanges);
-		btnSaveChanges.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			saveProperty();
-    		}
-    	});
-		
 		createElementListModel();	
 	}
 
@@ -2123,9 +2080,7 @@ public class Layer {
 					// renderMap(); // render Map again
 					//GeneralLayers.generalLayer.renderImageMap();
 					//GeneralLayers.generalLayer.repaint();
-				}
-				
-				if (btnSetInterest.isSelected()) {
+				} else {
 					elementItem.interest = !elementItem.interest; 
 					Rectangle rect = listElement.getCellBounds(index, index);
 					listElement.repaint(rect);
@@ -2151,14 +2106,6 @@ public class Layer {
 		propertyPanel.add(control, BorderLayout.SOUTH);
 		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
 
-		btnSetInterest = new JToggleButton("Set Interests");
-		control.add(btnSetInterest);
-		btnSetInterest.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			// TODO ...
-    		}
-    	});
-		
 		cbAddToPicnicMap = new JCheckBox("Add to Picnic Map");
 		control.add(cbAddToPicnicMap);
 		cbAddToPicnicMap.addItemListener(new ItemListener() {
@@ -2166,7 +2113,6 @@ public class Layer {
 				updatePicnicMap();
 			}
 		});
-		cbAddToPicnicMap.setSelected(true);
 		
 		cbShowMask = new JCheckBox("Show mask");
 		control.add(cbShowMask);
@@ -2179,16 +2125,7 @@ public class Layer {
 				}
 			}
 		});
-		cbShowMask.setSelected(false);
 
-		JButton btnSaveChanges = new JButton("Save changes");
-		control.add(btnSaveChanges);
-		btnSaveChanges.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			saveProperty();
-    		}
-    	});
-		
 		createAspectListModel();	
 	}
 	
@@ -2236,9 +2173,7 @@ public class Layer {
 					// renderMap(); // render Map again
 					//GeneralLayers.generalLayer.renderImageMap();
 					//GeneralLayers.generalLayer.repaint();
-				}
-				
-				if (btnSetInterest.isSelected()) {
+				} else {
 					elementItem.interest = !elementItem.interest; 
 					Rectangle rect = listElement.getCellBounds(index, index);
 					listElement.repaint(rect);
@@ -2264,14 +2199,6 @@ public class Layer {
 		propertyPanel.add(control, BorderLayout.SOUTH);
 		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
 
-		btnSetInterest = new JToggleButton("Set Interests");
-		control.add(btnSetInterest);
-		btnSetInterest.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			// TODO ...
-    		}
-    	});
-		
 		cbAddToPicnicMap = new JCheckBox("Add to Picnic Map");
 		control.add(cbAddToPicnicMap);
 		cbAddToPicnicMap.addItemListener(new ItemListener() {
@@ -2279,7 +2206,6 @@ public class Layer {
 				updatePicnicMap();
 			}
 		});
-		cbAddToPicnicMap.setSelected(true);
 		
 		cbShowMask = new JCheckBox("Show mask");
 		control.add(cbShowMask);
@@ -2292,16 +2218,7 @@ public class Layer {
 				}
 			}
 		});
-		cbShowMask.setSelected(false);
 
-		JButton btnSaveChanges = new JButton("Save changes");
-		control.add(btnSaveChanges);
-		btnSaveChanges.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			saveProperty();
-    		}
-    	});
-		
 		createSlopeListModel();	
 	}
 
@@ -2362,24 +2279,11 @@ public class Layer {
 		JPanel control = new JPanel();
 		propertyPanel.add(control, BorderLayout.SOUTH);
 		control.setLayout(new BoxLayout(control, BoxLayout.Y_AXIS));
-
-		JButton btnSaveChanges = new JButton("Save changes");
-		control.add(btnSaveChanges);
-		btnSaveChanges.addActionListener(new ActionListener() {
-    		public void actionPerformed(ActionEvent e) {
-    			saveProperty();
-    		}
-    	});
 	}
 	
 	public boolean isAddToPicnicMap;
 	protected void updatePicnicMap() {
 		isAddToPicnicMap = !isAddToPicnicMap;
-		if (isAddToPicnicMap) {
-			GeneralLayers.updatePicnicMap();
-			GeneralLayers.generalMap.renderImageMap();
-			GeneralLayers.generalMap.repaint();
-		}
 	}
 	
 	public String getDescription(int xx, int yy) {
@@ -2561,10 +2465,10 @@ public class Layer {
 		}
 	}
 
-	public void getValues(Layer layerMask) {
+	public void setOnes() {
 		for (int i = 0; i < nRows; i++) { // loop nRows
 			for (int j = 0; j < nCols; j++) { // loop nCols
-				values[i][j] = layerMask.values[i][j];
+				values[i][j] = 1;
 			}
 		}
 	}
